@@ -1,0 +1,66 @@
+rules_version = '2';
+
+service cloud.firestore {
+
+    match /databases/{database}/documents {
+
+        function signedIn() {
+            return request.auth != null;
+        }
+
+        function isUser(userId) {
+            return signedIn() && request.auth.uid == userId;
+        }
+
+        function isChatParticipant(chatId) {
+            return signedIn()
+                && request.auth.uid in get(
+                    /databases/$(database)/documents/chats/$(chatId)
+                ).data.participantIds;
+        }
+
+        match /users/{userId} {
+            allow read, write: if isUser(userId);
+        }
+
+        match /listings/{listingId} {
+            allow read: if signedIn()
+                && (resource.data.verified == true
+                    || resource.data.ownerId == request.auth.uid);
+
+            allow create: if signedIn()
+                && request.resource.data.ownerId == request.auth.uid;
+
+            allow update, delete: if signedIn()
+                && resource.data.ownerId == request.auth.uid
+                && request.resource.data.ownerId == request.auth.uid;
+        }
+
+        match /chats/{chatId} {
+            allow read, update: if signedIn()
+                && request.auth.uid in resource.data.participantIds
+                && request.resource.data.participantIds == resource.data.participantIds;
+
+            allow create: if signedIn()
+                && request.auth.uid in request.resource.data.participantIds
+                && request.resource.data.studentId == request.auth.uid;
+
+            allow delete: if signedIn()
+                && request.auth.uid in resource.data.participantIds;
+
+            match /messages/{messageId} {
+                allow read, create: if isChatParticipant(chatId);
+                allow update, delete: if isChatParticipant(chatId)
+                    && resource.data.senderId == request.auth.uid;
+            }
+        }
+
+        match /reviews/{reviewId} {
+            allow read: if signedIn();
+            allow create: if signedIn()
+                && request.resource.data.studentId == request.auth.uid;
+            allow update, delete: if signedIn()
+                && resource.data.studentId == request.auth.uid;
+        }
+    }
+}

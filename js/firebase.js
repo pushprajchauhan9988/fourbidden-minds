@@ -17,6 +17,8 @@ import {
     collection,
     doc,
     getDoc,
+    getDocs,
+    getDocs,
     setDoc,
     addDoc,
     updateDoc,

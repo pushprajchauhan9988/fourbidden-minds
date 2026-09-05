@@ -2,7 +2,7 @@ import {
 
     auth,
     db,
-    storage,
+
     googleProvider,
 
     signInWithPopup,
@@ -12,6 +12,7 @@ import {
     collection,
     doc,
     getDoc,
+    getDocs,
     setDoc,
     addDoc,
     updateDoc,
@@ -21,24 +22,36 @@ import {
     orderBy,
     onSnapshot,
 
-    serverTimestamp,
-
-    ref,
-    uploadBytes,
-    getDownloadURL
+    serverTimestamp
 
 } from "./firebase.js";
 
 
 
-const app =
-    document.getElementById("app");
-
-
-
 /* ==========================================
-   APPLICATION STATE
+   GLOBAL STATE
 ========================================== */
+
+
+function clearSubscriptions() {
+
+    [
+
+        "unsubscribeListings",
+        "unsubscribeChats",
+        "unsubscribeMessages",
+        "unsubscribeReviews"
+
+    ].forEach(
+        key => {
+
+            state[key]?.();
+            state[key] = null;
+
+        }
+    );
+
+}
 
 
 const state = {
@@ -75,87 +88,101 @@ const state = {
 
 
 
+const app =
+    document.getElementById("app");
+
+
+
 /* ==========================================
    HELPERS
 ========================================== */
 
 
-function escapeHTML(value = "") {
+function escapeHTML(
+    value = ""
+) {
 
     return String(value)
+        .replace(
+            /[&<>"']/g,
+            char => ({
 
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#039;"
+
+            }[char])
+        );
 
 }
 
 
-function money(value) {
+
+function money(
+    value
+) {
 
     return new Intl.NumberFormat(
         "en-IN"
-    ).format(Number(value || 0));
+    ).format(
+        Number(value || 0)
+    );
 
 }
 
 
-function toast(message) {
+
+function toast(
+    message
+) {
 
     const root =
-        document.getElementById("toast-root");
-
-    root.innerHTML =
-        `<div class="toast">
-            ${escapeHTML(message)}
-        </div>`;
-
-    setTimeout(() => {
-
-        root.innerHTML = "";
-
-    }, 3000);
-
-}
+        document.getElementById(
+            "toast-root"
+        );
 
 
-function roleName() {
+    if (!root) {
 
-    return state.role === "owner"
-        ? "Property Provider"
-        : "Student";
-
-}
-
-
-
-/* ==========================================
-   NAVIGATION
-========================================== */
-
-
-function go(page, data = null) {
-
-    state.page = page;
-
-
-    if (data?.listingId) {
-
-        state.selectedListing =
-            data.listingId;
+        return;
 
     }
 
 
-    if (data?.chatId) {
+    root.innerHTML = `
 
-        state.selectedChat =
-            data.chatId;
+        <div class="toast">
 
-    }
+            ${escapeHTML(
+                message
+            )}
 
+        </div>
+
+    `;
+
+
+    setTimeout(
+        () => {
+
+            root.innerHTML = "";
+
+        },
+        3000
+    );
+
+}
+
+
+
+function go(
+    page
+) {
+
+    state.page =
+        page;
 
     render();
 
@@ -164,7 +191,7 @@ function go(page, data = null) {
 
 
 /* ==========================================
-   LANDING PAGE
+   LANDING
 ========================================== */
 
 
@@ -174,38 +201,75 @@ function landingPage() {
 
         <main class="hero">
 
-            <div class="hero-inner">
 
-                <span class="eyebrow">
-                    MITS Gwalior • Student Accommodation
+            <div class="
+                hero-inner
+            ">
+
+
+                <span class="
+                    hero-badge
+                ">
+
+                    ✦ MITS Gwalior
+                    • Student Accommodation
+
                 </span>
 
 
+
                 <h1>
+
                     Find a stay that
+
                     <br>
-                    <span>fits your life.</span>
+
+                    <span>
+                        fits your life.
+                    </span>
+
                 </h1>
 
 
-                <p>
 
-                    Rent Studs brings verified
-                    rooms, PGs and hostels together
-                    so students can compare price,
-                    distance, facilities and monthly
-                    living cost before they visit.
+                <p class="
+                    hero-description
+                ">
+
+                    Discover rooms, PGs
+                    and hostels around MITS
+                    based on your budget,
+                    distance, facilities
+                    and lifestyle.
+
+                    <br><br>
+
+                    <strong>
+
+                        Don't just find a room.
+                        Find YOUR right room.
+
+                    </strong>
 
                 </p>
 
 
-                <div class="role-grid">
+
+                <div class="
+                    role-grid
+                ">
 
 
-                    <section class="role-card">
+                    <section
+                        class="role-card">
 
-                        <div class="role-icon">
+
+                        <div class="
+                            role-icon
+                        ">
+
                             🏠
+
                         </div>
 
 
@@ -216,31 +280,47 @@ function landingPage() {
 
                         <p>
 
-                            List your Hostel,
-                            PG or House Room,
+                            List your hostel,
+                            PG or house room,
                             connect with students
                             and get your property
-                            verified.
+                            verified by Rent Studs.
 
                         </p>
 
 
                         <button
-                            class="btn btn-primary"
-                            onclick="window.rentStuds.chooseRole('owner')">
+                            class="
+                                btn
+                                btn-primary
+                            "
 
-                            Continue as Provider →
+                            onclick="
+                                window.rentStuds
+                                .chooseRole(
+                                    'owner'
+                                )
+                            ">
+
+                            List Your Property →
 
                         </button>
+
 
                     </section>
 
 
 
-                    <section class="role-card">
+                    <section
+                        class="role-card">
 
-                        <div class="role-icon">
+
+                        <div class="
+                            role-icon
+                        ">
+
                             🎓
+
                         </div>
 
 
@@ -251,28 +331,40 @@ function landingPage() {
 
                         <p>
 
-                            Find verified stays near
-                            MITS according to your
-                            budget, distance and
-                            lifestyle.
+                            Find verified stays
+                            around MITS based on
+                            rent, distance,
+                            sharing and facilities.
 
                         </p>
 
 
                         <button
-                            class="btn btn-primary"
-                            onclick="window.rentStuds.chooseRole('student')">
+                            class="
+                                btn
+                                btn-primary
+                            "
 
-                            Find my stay →
+                            onclick="
+                                window.rentStuds
+                                .chooseRole(
+                                    'student'
+                                )
+                            ">
+
+                            Find My Stay →
 
                         </button>
+
 
                     </section>
 
 
                 </div>
 
+
             </div>
+
 
         </main>
 
@@ -291,18 +383,32 @@ function loginPage() {
 
     return `
 
-        <main class="login-page">
+        <main class="
+            login-page
+        ">
 
-            <section class="login-card">
+
+            <section class="
+                login-card
+            ">
+
 
                 <div class="brand">
-                    Rent <span>Studs</span>
+
+                    Rent
+                    <span>
+                        Studs
+                    </span>
+
                 </div>
 
 
-                <h2 style="margin-top:15px">
+                <h2
+                    style="margin-top:15px">
 
-                    ${roleName()} Login
+                    ${state.role === "owner"
+                        ? "Property Provider Login"
+                        : "Student Login"}
 
                 </h2>
 
@@ -311,27 +417,45 @@ function loginPage() {
                     class="muted"
                     style="margin-top:8px">
 
-                    Continue securely with Google.
+                    Continue securely
+                    with Google.
 
                 </p>
 
 
                 <button
-                    class="google-btn"
-                    onclick="window.rentStuds.login()">
+                    class="
+                        google-btn
+                    "
 
-                    🔵 Continue with Google
+                    onclick="
+                        window.rentStuds
+                        .login()
+                    ">
+
+                    🔵
+                    Continue with Google
 
                 </button>
 
 
                 <button
-                    class="btn btn-outline"
-                    onclick="window.rentStuds.go('landing')">
+                    class="
+                        btn
+                        btn-outline
+                    "
+
+                    onclick="
+                        window.rentStuds
+                        .go(
+                            'landing'
+                        )
+                    ">
 
                     ← Back
 
                 </button>
+
 
             </section>
 
@@ -344,13 +468,25 @@ function loginPage() {
 
 
 /* ==========================================
-   ROLE SELECTION
+   CHOOSE ROLE
 ========================================== */
 
 
-function chooseRole(role) {
+function chooseRole(
+    role
+) {
 
-    state.role = role;
+    if (
+        role !== "owner" &&
+        role !== "student"
+    ) {
+
+        return;
+
+    }
+
+    state.role =
+        role;
 
     go("login");
 
@@ -359,7 +495,7 @@ function chooseRole(role) {
 
 
 /* ==========================================
-   GOOGLE LOGIN
+   LOGIN
 ========================================== */
 
 
@@ -367,35 +503,18 @@ async function login() {
 
     try {
 
-        const result =
-            await signInWithPopup(
-                auth,
-                googleProvider
-            );
+        await signInWithPopup(
+            auth,
+            googleProvider
+        );
 
+    } catch (
+        error
+    ) {
 
-        state.user =
-            result.user;
-
-
-        await loadUserProfile();
-
-
-        state.page =
-            state.role === "owner"
-                ? "ownerHome"
-                : "studentHome";
-
-
-        subscribeToData();
-
-
-        render();
-
-
-    } catch (error) {
-
-        console.error(error);
+        console.error(
+            error
+        );
 
         toast(
             error.message ||
@@ -409,11 +528,11 @@ async function login() {
 
 
 /* ==========================================
-   PROFILE
+   USER PROFILE
 ========================================== */
 
 
-async function loadUserProfile() {
+async function loadProfile() {
 
     const userRef =
         doc(
@@ -423,11 +542,15 @@ async function loadUserProfile() {
         );
 
 
-    const snap =
-        await getDoc(userRef);
+    const snapshot =
+        await getDoc(
+            userRef
+        );
 
 
-    if (!snap.exists()) {
+    if (
+        !snapshot.exists()
+    ) {
 
         state.profile = {
 
@@ -461,33 +584,36 @@ async function loadUserProfile() {
             state.profile
         );
 
+
     } else {
 
         state.profile =
-            snap.data();
+            snapshot.data();
+
+
+        state.role =
+            state.profile.role ||
+            state.role ||
+            "student";
 
 
         if (
-            state.role &&
-            state.profile.role !== state.role
+            !state.profile.role
         ) {
 
             await updateDoc(
                 userRef,
                 {
+
                     role:
                         state.role
+
                 }
             );
 
 
             state.profile.role =
                 state.role;
-
-        } else {
-
-            state.role =
-                state.profile.role;
 
         }
 
@@ -498,7 +624,7 @@ async function loadUserProfile() {
 
 
 /* ==========================================
-   TOP NAVBAR
+   TOP BAR
 ========================================== */
 
 
@@ -506,11 +632,16 @@ function topbar() {
 
     return `
 
-        <header class="topbar">
+        <header class="
+            topbar
+        ">
 
 
             <button
-                class="brand"
+                class="
+                    brand
+                "
+
                 onclick="
                     window.rentStuds.go(
                         '${state.role === "owner"
@@ -519,29 +650,48 @@ function topbar() {
                     )
                 ">
 
-                Rent <span>Studs</span>
+                Rent
+                <span>
+                    Studs
+                </span>
 
             </button>
 
 
-            <div class="topbar-actions">
 
-                <span class="small">
+            <div class="
+                topbar-actions
+            ">
+
+
+                <span class="
+                    topbar-user
+                    small
+                ">
 
                     ${escapeHTML(
-                        state.profile?.name || ""
+                        state.profile?.name ||
+                        ""
                     )}
 
                 </span>
 
 
                 <button
-                    class="btn btn-outline"
-                    onclick="window.rentStuds.logout()">
+                    class="
+                        btn
+                        btn-outline
+                    "
+
+                    onclick="
+                        window.rentStuds
+                        .logout()
+                    ">
 
                     Logout
 
                 </button>
+
 
             </div>
 
@@ -555,59 +705,88 @@ function topbar() {
 
 
 /* ==========================================
-   BOTTOM NAVIGATION
+   BOTTOM NAV
 ========================================== */
 
 
-function bottomNav(active) {
+function bottomNav(
+    active
+) {
 
-    if (state.role === "owner") {
+    if (
+        state.role ===
+        "owner"
+    ) {
 
         return `
 
-            <nav class="bottom-nav">
+            <nav class="
+                bottom-nav
+            ">
+
 
                 <button
-                    class="nav-btn
-                    ${active === "home"
-                        ? "active"
-                        : ""}"
+                    class="
+                        nav-btn
+                        ${
+                            active === "home"
+                            ? "active"
+                            : ""
+                        }
+                    "
 
                     onclick="
-                        window.rentStuds.go(
+                        window.rentStuds
+                        .go(
                             'ownerHome'
                         )
                     ">
 
                     🏠
-                    <span>Home</span>
+
+                    <span>
+                        Home
+                    </span>
 
                 </button>
 
 
+
                 <button
-                    class="nav-btn
-                    ${active === "chat"
-                        ? "active"
-                        : ""}"
+                    class="
+                        nav-btn
+                        ${
+                            active === "chat"
+                            ? "active"
+                            : ""
+                        }
+                    "
 
                     onclick="
-                        window.rentStuds.go(
+                        window.rentStuds
+                        .go(
                             'chat'
                         )
                     ">
 
                     💬
-                    <span>Chat</span>
+
+                    <span>
+                        Chat
+                    </span>
 
                 </button>
 
 
+
                 <button
-                    class="nav-plus"
+                    class="
+                        nav-plus
+                    "
 
                     onclick="
-                        window.rentStuds.go(
+                        window.rentStuds
+                        .go(
                             'create'
                         )
                     ">
@@ -617,22 +796,32 @@ function bottomNav(active) {
                 </button>
 
 
+
                 <button
-                    class="nav-btn
-                    ${active === "profile"
-                        ? "active"
-                        : ""}"
+                    class="
+                        nav-btn
+                        ${
+                            active === "profile"
+                            ? "active"
+                            : ""
+                        }
+                    "
 
                     onclick="
-                        window.rentStuds.go(
+                        window.rentStuds
+                        .go(
                             'profile'
                         )
                     ">
 
                     👤
-                    <span>Me</span>
+
+                    <span>
+                        Me
+                    </span>
 
                 </button>
+
 
             </nav>
 
@@ -643,60 +832,90 @@ function bottomNav(active) {
 
     return `
 
-        <nav class="bottom-nav">
+        <nav class="
+            bottom-nav
+        ">
+
 
             <button
-                class="nav-btn
-                ${active === "home"
-                    ? "active"
-                    : ""}"
+                class="
+                    nav-btn
+                    ${
+                        active === "home"
+                        ? "active"
+                        : ""
+                    }
+                "
 
                 onclick="
-                    window.rentStuds.go(
+                    window.rentStuds
+                    .go(
                         'studentHome'
                     )
                 ">
 
                 🏠
-                <span>Home</span>
+
+                <span>
+                    Home
+                </span>
 
             </button>
 
 
+
             <button
-                class="nav-btn
-                ${active === "chat"
-                    ? "active"
-                    : ""}"
+                class="
+                    nav-btn
+                    ${
+                        active === "chat"
+                        ? "active"
+                        : ""
+                    }
+                "
 
                 onclick="
-                    window.rentStuds.go(
+                    window.rentStuds
+                    .go(
                         'chat'
                     )
                 ">
 
                 💬
-                <span>Chat</span>
+
+                <span>
+                    Chat
+                </span>
 
             </button>
 
 
+
             <button
-                class="nav-btn
-                ${active === "profile"
-                    ? "active"
-                    : ""}"
+                class="
+                    nav-btn
+                    ${
+                        active === "profile"
+                        ? "active"
+                        : ""
+                    }
+                "
 
                 onclick="
-                    window.rentStuds.go(
+                    window.rentStuds
+                    .go(
                         'profile'
                     )
                 ">
 
                 👤
-                <span>Me</span>
+
+                <span>
+                    Me
+                </span>
 
             </button>
+
 
         </nav>
 
@@ -713,39 +932,46 @@ function bottomNav(active) {
 
 function ownerHome() {
 
-    const listings =
+    const mine =
         state.listings.filter(
-            l =>
-                l.ownerId ===
+            listing =>
+                listing.ownerId ===
                 state.user.uid
         );
 
 
     const verified =
-        listings.filter(
-            l => l.verified
+        mine.filter(
+            listing =>
+                listing.verified
         ).length;
 
 
-    const scheduled =
-        listings.filter(
-            l =>
-                l.verificationStatus ===
+    const pending =
+        mine.filter(
+            listing =>
+                listing.verificationStatus ===
                 "scheduled"
         ).length;
+
 
 
     return `
 
         <div>
 
+
             ${topbar()}
 
 
-            <main class="container page">
+            <main class="
+                container
+                page
+            ">
 
 
                 <div class="heading">
+
 
                     <div>
 
@@ -754,17 +980,24 @@ function ownerHome() {
                         </h1>
 
                         <p>
-                            Manage your properties
-                            and verification status.
+
+                            Manage your stays
+                            and verification.
+
                         </p>
 
                     </div>
 
 
                     <button
-                        class="btn btn-primary"
+                        class="
+                            btn
+                            btn-primary
+                        "
+
                         onclick="
-                            window.rentStuds.go(
+                            window.rentStuds
+                            .go(
                                 'create'
                             )
                         ">
@@ -773,92 +1006,146 @@ function ownerHome() {
 
                     </button>
 
+
                 </div>
 
 
 
-                <div class="kpi-row">
+                <div class="
+                    kpi-row
+                ">
 
 
-                    <div class="card kpi">
+                    <div class="
+                        card
+                        kpi
+                    ">
 
                         <div class="small">
                             Total Listings
                         </div>
 
-                        <div class="kpi-number">
-                            ${listings.length}
+                        <div class="
+                            kpi-number
+                        ">
+
+                            ${mine.length}
+
                         </div>
 
                     </div>
 
 
-                    <div class="card kpi">
+
+                    <div class="
+                        card
+                        kpi
+                    ">
 
                         <div class="small">
                             Verified
                         </div>
 
-                        <div class="kpi-number">
+                        <div class="
+                            kpi-number
+                        ">
+
                             ${verified}
+
                         </div>
 
                     </div>
 
 
-                    <div class="card kpi">
+
+                    <div class="
+                        card
+                        kpi
+                    ">
 
                         <div class="small">
-                            Verification Scheduled
+                            Pending
                         </div>
 
-                        <div class="kpi-number">
-                            ${scheduled}
+                        <div class="
+                            kpi-number
+                        ">
+
+                            ${pending}
+
                         </div>
 
                     </div>
+
 
                 </div>
 
 
 
                 ${
-                    listings.length
+                    mine.length
+
                     ?
 
-                    `<div class="grid-3">
+                    `
 
-                        ${listings
-                            .map(ownerListingCard)
+                    <div class="
+                        grid-3
+                    ">
+
+                        ${mine
+                            .map(
+                                ownerCard
+                            )
                             .join("")}
 
-                    </div>`
+                    </div>
+
+                    `
 
                     :
 
                     `
 
-                    <div class="card empty">
+                    <div class="
+                        card
+                        empty
+                    ">
 
-                        <div class="empty-icon">
+                        <div class="
+                            empty-icon
+                        ">
+
                             🏠
+
                         </div>
 
+
                         <h2>
+
                             No Listings Yet
+
                         </h2>
+
 
                         <p>
 
-                            Add your first property
-                            for students.
+                            Add your first
+                            student-friendly
+                            property.
 
                         </p>
 
+
                         <button
-                            class="btn btn-primary"
+                            class="
+                                btn
+                                btn-primary
+                            "
+
                             onclick="
-                                window.rentStuds.go(
+                                window.rentStuds
+                                .go(
                                     'create'
                                 )
                             ">
@@ -866,6 +1153,7 @@ function ownerHome() {
                             Create Listing
 
                         </button>
+
 
                     </div>
 
@@ -879,6 +1167,7 @@ function ownerHome() {
 
             ${bottomNav("home")}
 
+
         </div>
 
     `;
@@ -887,20 +1176,35 @@ function ownerHome() {
 
 
 
-function ownerListingCard(listing) {
+/* ==========================================
+   PROVIDER CARD
+========================================== */
+
+
+function ownerCard(
+    listing
+) {
 
     const image =
         listing.media?.find(
-            m => m.kind === "image"
+            media =>
+                media.kind ===
+                "image"
         )?.url;
 
 
     return `
 
-        <article class="card listing-card">
+        <article class="
+            card
+            listing-card
+        ">
 
 
-            <div class="listing-media">
+            <div class="
+                listing-media
+            ">
+
 
                 ${
                     image
@@ -908,20 +1212,30 @@ function ownerListingCard(listing) {
                     ?
 
                     `<img
-                        src="${escapeHTML(image)}"
-                        alt="${escapeHTML(listing.title)}"
+                        src="${escapeHTML(
+                            image
+                        )}"
+                        alt="${escapeHTML(
+                            listing.title
+                        )}"
                     >`
 
                     :
 
-                    `<div class="media-placeholder">
+                    `<div class="
+                        media-placeholder
+                    ">
+
                         🏠
+
                     </div>`
 
                 }
 
 
-                <span class="media-chip">
+                <span class="
+                    media-chip
+                ">
 
                     ${escapeHTML(
                         listing.type
@@ -929,24 +1243,27 @@ function ownerListingCard(listing) {
 
                 </span>
 
+
             </div>
 
 
 
-            <div class="listing-body">
+            <div class="
+                listing-body
+            ">
 
 
                 <div class="badges">
 
-                    <span
-                        class="
-                            badge
-                            ${
-                                listing.verified
-                                ? "badge-verified"
-                                : "badge-unverified"
-                            }
-                        ">
+
+                    <span class="
+                        badge
+                        ${
+                            listing.verified
+                            ? "badge-verified"
+                            : "badge-unverified"
+                        }
+                    ">
 
                         ${
                             listing.verified
@@ -962,30 +1279,39 @@ function ownerListingCard(listing) {
 
                         ?
 
-                        `<span class="
-                            badge
-                            badge-booked
-                        ">
+                        `<span
+                            class="
+                                badge
+                                badge-booked
+                            ">
+
                             BOOKED
+
                         </span>`
 
-                        : ""
+                        :
+
+                        ""
 
                     }
+
 
                 </div>
 
 
                 <h3>
+
                     ${escapeHTML(
                         listing.title
                     )}
+
                 </h3>
 
 
                 <div class="meta">
 
                     📍
+
                     ${escapeHTML(
                         listing.location
                     )}
@@ -993,7 +1319,8 @@ function ownerListingCard(listing) {
                     •
 
                     ${
-                        listing.distance || 0
+                        listing.distance ||
+                        0
                     }
 
                     km
@@ -1001,17 +1328,31 @@ function ownerListingCard(listing) {
                 </div>
 
 
-                <div class="price-row">
+                <div class="
+                    price-row
+                ">
 
-                    <span class="price">
-                        ₹${money(listing.price)}
+                    <span class="
+                        price
+                    ">
+
+                        ₹${money(
+                            listing.price
+                        )}
+
                     </span>
 
-                    <span class="small">
+
+                    <span class="
+                        small
+                    ">
+
                         ${escapeHTML(
                             listing.sharing
                         )}
+
                     </span>
+
 
                 </div>
 
@@ -1019,25 +1360,38 @@ function ownerListingCard(listing) {
                 <div class="tags">
 
                     ${
-                        (listing.facilities || [])
-                            .slice(0,4)
-                            .map(
-                                f =>
+                        (
+                            listing.facilities ||
+                            []
+                        )
+                        .slice(
+                            0,
+                            4
+                        )
+                        .map(
+                            item =>
                                 `<span class="tag">
-                                    ${escapeHTML(f)}
+                                    ${escapeHTML(
+                                        item
+                                    )}
                                 </span>`
-                            )
-                            .join("")
+                        )
+                        .join("")
                     }
 
                 </div>
 
 
                 <button
-                    class="btn btn-outline btn-block"
+                    class="
+                        btn
+                        btn-outline
+                        btn-block
+                    "
 
                     onclick="
-                        window.rentStuds.openOwner(
+                        window.rentStuds
+                        .openOwner(
                             '${listing.id}'
                         )
                     ">
@@ -1087,13 +1441,18 @@ function createListingPage() {
 
         <div>
 
+
             ${topbar()}
 
 
-            <main class="container page">
+            <main class="
+                container
+                page
+            ">
 
 
                 <div class="heading">
+
 
                     <div>
 
@@ -1102,11 +1461,14 @@ function createListingPage() {
                         </h1>
 
                         <p>
-                            Give students all the
-                            information they need.
+
+                            Add complete property
+                            information.
+
                         </p>
 
                     </div>
+
 
                 </div>
 
@@ -1114,13 +1476,21 @@ function createListingPage() {
 
                 <form
                     id="listing-form"
-                    class="card form-card">
+                    class="
+                        card
+                        form-card
+                    ">
 
 
-                    <div class="form-grid">
+                    <div class="
+                        form-grid
+                    ">
 
 
-                        <div class="field full">
+                        <div class="
+                            field
+                            full
+                        ">
 
                             <label>
                                 Stay Type *
@@ -1131,7 +1501,7 @@ function createListingPage() {
                                 required>
 
                                 <option value="">
-                                    Select
+                                    Choose stay type
                                 </option>
 
                                 <option>
@@ -1151,7 +1521,10 @@ function createListingPage() {
                         </div>
 
 
-                        <div class="field">
+
+                        <div class="
+                            field
+                        ">
 
                             <label>
                                 Listing Title *
@@ -1160,6 +1533,7 @@ function createListingPage() {
                             <input
                                 name="title"
                                 required
+
                                 placeholder="
                                     Modern PG near MITS
                                 ">
@@ -1167,7 +1541,10 @@ function createListingPage() {
                         </div>
 
 
-                        <div class="field">
+
+                        <div class="
+                            field
+                        ">
 
                             <label>
                                 Monthly Rent *
@@ -1178,12 +1555,16 @@ function createListingPage() {
                                 type="number"
                                 min="0"
                                 required
+
                                 placeholder="6500">
 
                         </div>
 
 
-                        <div class="field">
+
+                        <div class="
+                            field
+                        ">
 
                             <label>
                                 Location *
@@ -1192,6 +1573,7 @@ function createListingPage() {
                             <input
                                 name="location"
                                 required
+
                                 placeholder="
                                     Thatipur, Gwalior
                                 ">
@@ -1199,10 +1581,13 @@ function createListingPage() {
                         </div>
 
 
-                        <div class="field">
+
+                        <div class="
+                            field
+                        ">
 
                             <label>
-                                Distance from MITS
+                                Distance from MITS (km)
                             </label>
 
                             <input
@@ -1210,18 +1595,23 @@ function createListingPage() {
                                 type="number"
                                 min="0"
                                 step="0.1"
+
                                 placeholder="2.5">
 
                         </div>
 
 
-                        <div class="field">
+
+                        <div class="
+                            field
+                        ">
 
                             <label>
                                 Sharing
                             </label>
 
-                            <select name="sharing">
+                            <select
+                                name="sharing">
 
                                 <option>
                                     Single
@@ -1244,14 +1634,18 @@ function createListingPage() {
                         </div>
 
 
-                        <div class="field">
+
+                        <div class="
+                            field
+                        ">
 
                             <label>
-                                Move-in / Arrival Window
+                                Move-in / Entry Window
                             </label>
 
                             <input
                                 name="arrival"
+
                                 placeholder="
                                     Available after 2 PM
                                 ">
@@ -1259,13 +1653,17 @@ function createListingPage() {
                         </div>
 
 
-                        <div class="field">
+
+                        <div class="
+                            field
+                        ">
 
                             <label>
                                 Smoking
                             </label>
 
-                            <select name="smoking">
+                            <select
+                                name="smoking">
 
                                 <option>
                                     Not Allowed
@@ -1284,13 +1682,17 @@ function createListingPage() {
                         </div>
 
 
-                        <div class="field">
+
+                        <div class="
+                            field
+                        ">
 
                             <label>
                                 Food / Mess
                             </label>
 
-                            <select name="food">
+                            <select
+                                name="food">
 
                                 <option>
                                     Not Available
@@ -1309,7 +1711,10 @@ function createListingPage() {
                         </div>
 
 
-                        <div class="field">
+
+                        <div class="
+                            field
+                        ">
 
                             <label>
                                 Electricity / Month
@@ -1324,7 +1729,10 @@ function createListingPage() {
                         </div>
 
 
-                        <div class="field">
+
+                        <div class="
+                            field
+                        ">
 
                             <label>
                                 Wi-Fi / Month
@@ -1339,7 +1747,10 @@ function createListingPage() {
                         </div>
 
 
-                        <div class="field">
+
+                        <div class="
+                            field
+                        ">
 
                             <label>
                                 Maintenance / Month
@@ -1354,21 +1765,30 @@ function createListingPage() {
                         </div>
 
 
-                        <div class="field full">
+
+                        <div class="
+                            field
+                            full
+                        ">
 
                             <label>
                                 Facilities
                             </label>
 
 
-                            <div class="check-grid">
+                            <div class="
+                                check-grid
+                            ">
+
 
                                 ${
                                     facilities
                                     .map(
                                         facility => `
 
-                                        <label class="check">
+                                        <label class="
+                                            check
+                                        ">
 
                                             <input
                                                 type="checkbox"
@@ -1385,63 +1805,90 @@ function createListingPage() {
                                     .join("")
                                 }
 
+
                             </div>
+
 
                         </div>
 
 
-                        <div class="field full">
+
+                        <div class="
+                            field
+                            full
+                        ">
 
                             <label>
                                 Custom Facilities
                             </label>
 
                             <input
-                                name="customFacilities"
+                                name="
+                                    customFacilities
+                                "
+
                                 placeholder="
-                                    Balcony, Lift, RO water
+                                    Balcony, Lift, RO Water
                                 ">
 
                         </div>
 
 
-                        <div class="field full">
+
+                        <div class="
+                            field
+                            full
+                        ">
 
                             <label>
-                                Description / Rules
+                                Description & Rules
                             </label>
 
                             <textarea
-                                name="description"
+                                name="
+                                    description
+                                "
+
                                 placeholder="
-                                    Write visitor rules,
-                                    gate timings,
-                                    deposit details,
-                                    house rules, etc.
+                                    Visitor rules,
+                                    gate timing,
+                                    deposit,
+                                    house rules,
+                                    etc.
                                 "></textarea>
 
                         </div>
 
 
-                        <div class="field full">
+
+                        <div class="
+                            field
+                            full
+                        ">
 
                             <label>
-                                Photos / Room Video
+                                Room Photos / Video
                             </label>
 
                             <input
                                 name="media"
                                 type="file"
-                                multiple
+
                                 accept="
                                     image/*,
                                     video/*
-                                ">
+                                "
 
-                            <span class="small">
+                                multiple>
 
-                                Up to 8 files.
-                                Maximum 25 MB per file.
+
+                            <span class="
+                                small
+                            ">
+
+                                Media upload will
+                                be connected in
+                                our final storage step.
 
                             </span>
 
@@ -1451,14 +1898,22 @@ function createListingPage() {
                     </div>
 
 
-                    <div class="form-actions">
+
+                    <div class="
+                        form-actions
+                    ">
+
 
                         <button
                             type="button"
-                            class="btn btn-outline"
+                            class="
+                                btn
+                                btn-outline
+                            "
 
                             onclick="
-                                window.rentStuds.go(
+                                window.rentStuds
+                                .go(
                                     'ownerHome'
                                 )
                             ">
@@ -1470,11 +1925,15 @@ function createListingPage() {
 
                         <button
                             type="submit"
-                            class="btn btn-primary">
+                            class="
+                                btn
+                                btn-primary
+                            ">
 
                             Publish Listing
 
                         </button>
+
 
                     </div>
 
@@ -1487,6 +1946,7 @@ function createListingPage() {
 
             ${bottomNav("home")}
 
+
         </div>
 
     `;
@@ -1496,11 +1956,13 @@ function createListingPage() {
 
 
 /* ==========================================
-   SAVE LISTING
+   CREATE LISTING
 ========================================== */
 
 
-async function createListing(event) {
+async function submitListing(
+    event
+) {
 
     event.preventDefault();
 
@@ -1509,65 +1971,22 @@ async function createListing(event) {
         event.currentTarget;
 
 
-    const submit =
-        form.querySelector(
-            'button[type="submit"]'
+    const data =
+        new FormData(
+            form
         );
-
-
-    const files =
-        [...form.querySelector(
-            '[name="media"]'
-        ).files];
-
-
-    if (files.length > 8) {
-
-        toast(
-            "Please select 8 files or fewer."
-        );
-
-        return;
-
-    }
-
-
-    for (const file of files) {
-
-        if (
-            file.size >
-            25 * 1024 * 1024
-        ) {
-
-            toast(
-                `${file.name} is larger than 25 MB.`
-            );
-
-            return;
-
-        }
-
-    }
 
 
     try {
 
-        submit.disabled = true;
+        const facilities =
 
-        submit.textContent =
-            "Uploading...";
-
-
-        const fd =
-            new FormData(form);
-
-
-        let facilities =
             [
                 ...form.querySelectorAll(
                     '[name="facility"]:checked'
                 )
             ]
+
             .map(
                 item =>
                     item.value
@@ -1576,9 +1995,10 @@ async function createListing(event) {
 
         const custom =
             String(
-                fd.get(
+                data.get(
                     "customFacilities"
-                ) || ""
+                ) ||
+                ""
             );
 
 
@@ -1587,90 +2007,26 @@ async function createListing(event) {
             .split(",")
 
             .map(
-                value =>
-                    value.trim()
+                x =>
+                    x.trim()
             )
 
             .filter(Boolean)
 
             .forEach(
-                value =>
-                    facilities.push(value)
+                x =>
+                    facilities.push(x)
             );
 
-
-
-        /* MEDIA UPLOAD */
-
-
-        const media = [];
-
-
-        for (const file of files) {
-
-            const filename =
-
-                `${Date.now()}-
-                ${Math.random()
-                    .toString(36)
-                    .slice(2)}
-                -${file.name}`;
-
-
-            const path =
-
-                `listing-media/
-                ${state.user.uid}/
-                ${filename}`;
-
-
-            const storageRef =
-                ref(
-                    storage,
-                    path
-                );
-
-
-            await uploadBytes(
-                storageRef,
-                file
-            );
-
-
-            const url =
-                await getDownloadURL(
-                    storageRef
-                );
-
-
-            media.push({
-
-                url: url,
-
-                kind:
-                    file.type.startsWith(
-                        "video/"
-                    )
-                    ? "video"
-                    : "image",
-
-                name:
-                    file.name
-
-            });
-
-        }
-
-
-
-        /* SAVE LISTING */
 
 
         await addDoc(
+
             collection(
                 db,
                 "listings"
             ),
+
             {
 
                 ownerId:
@@ -1680,59 +2036,86 @@ async function createListing(event) {
                     state.profile.name,
 
                 title:
-                    fd.get("title"),
+                    data.get("title"),
 
                 type:
-                    fd.get("type"),
+                    data.get("type"),
 
                 price:
                     Number(
-                        fd.get("price") || 0
+                        data.get(
+                            "price"
+                        ) ||
+                        0
                     ),
 
                 location:
-                    fd.get("location"),
+                    data.get(
+                        "location"
+                    ),
 
                 distance:
                     Number(
-                        fd.get("distance") || 0
+                        data.get(
+                            "distance"
+                        ) ||
+                        0
                     ),
 
                 sharing:
-                    fd.get("sharing"),
+                    data.get(
+                        "sharing"
+                    ),
 
                 arrival:
-                    fd.get("arrival"),
+                    data.get(
+                        "arrival"
+                    ),
 
                 smoking:
-                    fd.get("smoking"),
+                    data.get(
+                        "smoking"
+                    ),
 
                 food:
-                    fd.get("food"),
+                    data.get(
+                        "food"
+                    ),
 
                 electricity:
                     Number(
-                        fd.get("electricity") || 0
+                        data.get(
+                            "electricity"
+                        ) ||
+                        0
                     ),
 
                 wifi:
                     Number(
-                        fd.get("wifi") || 0
+                        data.get(
+                            "wifi"
+                        ) ||
+                        0
                     ),
 
                 maintenance:
                     Number(
-                        fd.get("maintenance") || 0
+                        data.get(
+                            "maintenance"
+                        ) ||
+                        0
                     ),
 
                 facilities:
                     facilities,
 
                 description:
-                    fd.get("description"),
+                    data.get(
+                        "description"
+                    ),
 
                 media:
-                    media,
+                    [],
 
                 verified:
                     false,
@@ -1758,27 +2141,25 @@ async function createListing(event) {
 
 
         toast(
-            "Listing published as Unverified."
+            "Listing created successfully."
         );
 
 
         go("ownerHome");
 
 
-    } catch (error) {
+    } catch (
+        error
+    ) {
 
-        console.error(error);
+        console.error(
+            error
+        );
 
         toast(
             error.message ||
             "Could not create listing."
         );
-
-
-        submit.disabled = false;
-
-        submit.textContent =
-            "Publish Listing";
 
     }
 
@@ -1791,7 +2172,9 @@ async function createListing(event) {
 ========================================== */
 
 
-function openOwner(id) {
+function openOwner(
+    id
+) {
 
     state.selectedListing =
         id;
@@ -1815,10 +2198,15 @@ function ownerDetailsPage() {
     if (!listing) {
 
         return `
+            <div class="
+                container
+                page
+            ">
 
-            <div class="container page">
-
-                <div class="card empty">
+                <div class="
+                    card
+                    empty
+                ">
 
                     <h2>
                         Listing not found
@@ -1827,44 +2215,45 @@ function ownerDetailsPage() {
                 </div>
 
             </div>
-
         `;
 
     }
 
 
     const images =
-        (listing.media || [])
-            .filter(
-                m =>
-                    m.kind ===
-                    "image"
-            );
-
-
-    const videos =
-        (listing.media || [])
-            .filter(
-                m =>
-                    m.kind ===
-                    "video"
-            );
+        (
+            listing.media ||
+            []
+        ).filter(
+            media =>
+                media.kind ===
+                "image"
+        );
 
 
     return `
 
         <div>
 
+
             ${topbar()}
 
 
-            <main class="container page">
+            <main class="
+                container
+                page
+            ">
 
 
                 <button
-                    class="btn btn-outline"
+                    class="
+                        btn
+                        btn-outline
+                    "
+
                     onclick="
-                        window.rentStuds.go(
+                        window.rentStuds
+                        .go(
                             'ownerHome'
                         )
                     ">
@@ -1878,16 +2267,22 @@ function ownerDetailsPage() {
 
 
 
-                <div class="detail-grid">
+                <div class="
+                    detail-grid
+                ">
 
 
                     <section>
 
 
-                        <div class="gallery">
+                        <div class="
+                            gallery
+                        ">
 
 
-                            <div class="gallery-main">
+                            <div class="
+                                gallery-main
+                            ">
 
                                 ${
                                     images[0]
@@ -1904,7 +2299,9 @@ function ownerDetailsPage() {
                                     :
 
                                     `<div
-                                        class="media-placeholder">
+                                        class="
+                                            media-placeholder
+                                        ">
 
                                         🏠
 
@@ -1915,89 +2312,59 @@ function ownerDetailsPage() {
                             </div>
 
 
+                            <div class="
+                                gallery-side
+                            ">
 
-                            <div class="gallery-side">
 
+                                ${
+                                    images[1]
 
-                                <div>
+                                    ?
 
-                                    ${
-                                        images[1]
-
-                                        ?
-
-                                        `<img
+                                    `<div>
+                                        <img
                                             src="${escapeHTML(
                                                 images[1].url
                                             )}"
                                             alt=""
-                                        >`
+                                        >
+                                    </div>`
 
-                                        :
+                                    :
 
-                                        videos[0]
+                                    `<div class="
+                                        media-placeholder
+                                    ">
+                                        Room
+                                    </div>`
 
-                                        ?
-
-                                        `<video
-                                            src="${escapeHTML(
-                                                videos[0].url
-                                            )}"
-                                            controls>
-                                        </video>`
-
-                                        :
-
-                                        `<div class="
-                                            media-placeholder
-                                        ">
-                                            Room
-                                        </div>`
-
-                                    }
-
-                                </div>
+                                }
 
 
+                                ${
+                                    images[2]
 
-                                <div>
+                                    ?
 
-                                    ${
-                                        images[2]
-
-                                        ?
-
-                                        `<img
+                                    `<div>
+                                        <img
                                             src="${escapeHTML(
                                                 images[2].url
                                             )}"
                                             alt=""
-                                        >`
+                                        >
+                                    </div>`
 
-                                        :
+                                    :
 
-                                        videos[1]
+                                    `<div class="
+                                        media-placeholder
+                                    ">
+                                        View
+                                    </div>`
 
-                                        ?
-
-                                        `<video
-                                            src="${escapeHTML(
-                                                videos[1].url
-                                            )}"
-                                            controls>
-                                        </video>`
-
-                                        :
-
-                                        `<div class="
-                                            media-placeholder
-                                        ">
-                                            View
-                                        </div>`
-
-                                    }
-
-                                </div>
+                                }
 
 
                             </div>
@@ -2007,10 +2374,16 @@ function ownerDetailsPage() {
 
 
 
-                        <div class="card detail-card">
+                        <div class="
+                            card
+                            detail-card
+                        ">
 
 
-                            <div class="badges">
+                            <div class="
+                                badges
+                            ">
+
 
                                 <span class="
                                     badge
@@ -2041,19 +2414,25 @@ function ownerDetailsPage() {
 
                                 </span>
 
+
                             </div>
 
 
                             <h2>
+
                                 ${escapeHTML(
                                     listing.title
                                 )}
+
                             </h2>
 
 
-                            <div class="meta">
+                            <div class="
+                                meta
+                            ">
 
                                 📍
+
                                 ${escapeHTML(
                                     listing.location
                                 )}
@@ -2061,18 +2440,24 @@ function ownerDetailsPage() {
                             </div>
 
 
-                            <div class="price-row">
+                            <div class="
+                                price-row
+                            ">
 
-                                <span class="price">
+                                <span class="
+                                    price
+                                ">
 
                                     ₹${money(
                                         listing.price
-                                    )}/month
+                                    )}
 
                                 </span>
 
 
-                                <span class="small">
+                                <span class="
+                                    small
+                                ">
 
                                     ${escapeHTML(
                                         listing.sharing
@@ -2092,11 +2477,10 @@ function ownerDetailsPage() {
 
                                 ${escapeHTML(
                                     listing.description ||
-                                    "No description added."
+                                    "No description."
                                 )}
 
                             </p>
-
 
 
                             <h3>
@@ -2104,26 +2488,34 @@ function ownerDetailsPage() {
                             </h3>
 
 
-                            <div class="facilities">
+                            <div class="
+                                facilities
+                            ">
+
 
                                 ${
-                                    (listing.facilities || [])
+                                    (
+                                        listing.facilities ||
+                                        []
+                                    )
+
                                     .map(
                                         facility =>
-
-                                        `<div
-                                            class="facility">
-
-                                            ✓
-                                            ${escapeHTML(
+                                            `<div class="
                                                 facility
-                                            )}
+                                            ">
 
-                                        </div>`
+                                                ✓
+                                                ${escapeHTML(
+                                                    facility
+                                                )}
 
+                                            </div>`
                                     )
+
                                     .join("")
                                 }
+
 
                             </div>
 
@@ -2135,42 +2527,58 @@ function ownerDetailsPage() {
 
 
 
-                    <aside class="sticky-card">
+                    <aside class="
+                        sticky-card
+                    ">
 
 
-                        <div class="cost-box">
+                        <div class="
+                            cost-box
+                        ">
 
-                            <div class="cost-label">
 
-                                Estimated monthly cost
+                            <div class="
+                                cost-label
+                            ">
+
+                                Estimated Monthly Cost
 
                             </div>
 
 
-                            <div class="cost-value">
+                            <div class="
+                                cost-value
+                            ">
 
                                 ₹${money(
 
-                                    (listing.price || 0) +
+                                    (
+                                        listing.price ||
+                                        0
+                                    )
 
-                                    (listing.electricity || 0) +
+                                    +
 
-                                    (listing.wifi || 0) +
+                                    (
+                                        listing.electricity ||
+                                        0
+                                    )
 
-                                    (listing.maintenance || 0)
+                                    +
+
+                                    (
+                                        listing.wifi ||
+                                        0
+                                    )
+
+                                    +
+
+                                    (
+                                        listing.maintenance ||
+                                        0
+                                    )
 
                                 )}
-
-                            </div>
-
-
-                            <div
-                                style="
-                                    font-size:12px;
-                                    opacity:.85;
-                                ">
-
-                                Rent + recurring costs
 
                             </div>
 
@@ -2178,7 +2586,10 @@ function ownerDetailsPage() {
 
 
 
-                        <div class="card detail-card">
+                        <div class="
+                            card
+                            detail-card
+                        ">
 
 
                             <h2>
@@ -2206,7 +2617,7 @@ function ownerDetailsPage() {
 
                                     :
 
-                                    "This property has not been verified yet."
+                                    "This property has not been verified."
 
                                 }
 
@@ -2222,13 +2633,16 @@ function ownerDetailsPage() {
                                 ?
 
                                 `
+
                                 <span class="
                                     badge
-                                    badge-verified">
+                                    badge-verified
+                                ">
 
-                                    ✓ Students can see this listing
+                                    ✓ Students can see this
 
                                 </span>
+
                                 `
 
                                 :
@@ -2240,25 +2654,23 @@ function ownerDetailsPage() {
 
                                 `
 
-                                <div class="notice">
+                                <div class="
+                                    notice
+                                ">
 
-                                    Scheduled for
+                                    Scheduled:
 
-                                    <strong>
-                                        ${escapeHTML(
-                                            listing.verificationDate ||
-                                            ""
-                                        )}
-                                    </strong>
+                                    ${escapeHTML(
+                                        listing.verificationDate ||
+                                        ""
+                                    )}
 
                                     at
 
-                                    <strong>
-                                        ${escapeHTML(
-                                            listing.verificationTime ||
-                                            ""
-                                        )}
-                                    </strong>
+                                    ${escapeHTML(
+                                        listing.verificationTime ||
+                                        ""
+                                    )}
 
                                 </div>
 
@@ -2302,7 +2714,7 @@ function ownerDetailsPage() {
                                         )
                                     ">
 
-                                    Schedule Verification
+                                    Schedule ₹100 Verification
 
                                 </button>
 
@@ -2334,18 +2746,25 @@ function ownerDetailsPage() {
 
 
 /* ==========================================
-   VERIFICATION MODAL
+   VERIFICATION
 ========================================== */
 
 
-function openVerification(id) {
+function openVerification(
+    id
+) {
 
     showModal(`
 
-        <div class="modal-card">
+        <div class="
+            modal-card
+        ">
 
 
-            <div class="modal-header">
+            <div class="
+                modal-header
+            ">
+
 
                 <h2>
                     Schedule Verification
@@ -2353,26 +2772,28 @@ function openVerification(id) {
 
 
                 <button
-                    class="close"
+                    class="
+                        close
+                    "
+
                     onclick="
-                        window.rentStuds.closeModal()
+                        window.rentStuds
+                        .closeModal()
                     ">
 
                     ×
 
                 </button>
 
+
             </div>
 
 
             <p class="muted">
 
-                Rent Studs provides a live video
-                verification service for
-
-                <strong>
-                    ₹100
-                </strong>.
+                Rent Studs provides
+                live video verification
+                for <strong>₹100</strong>.
 
                 No payment is collected
                 in this prototype.
@@ -2383,11 +2804,13 @@ function openVerification(id) {
             <br>
 
 
-            <div class="notice">
+            <div class="
+                notice
+            ">
 
-                After the call, Rent Studs
-                reviews the property and marks
-                the listing verified.
+                Select a convenient date
+                and time for the
+                verification call.
 
             </div>
 
@@ -2395,10 +2818,14 @@ function openVerification(id) {
             <br>
 
 
-            <div class="form-grid">
+            <div class="
+                form-grid
+            ">
 
 
-                <div class="field">
+                <div class="
+                    field
+                ">
 
                     <label>
                         Date
@@ -2411,7 +2838,9 @@ function openVerification(id) {
                 </div>
 
 
-                <div class="field">
+                <div class="
+                    field
+                ">
 
                     <label>
                         Time
@@ -2427,12 +2856,20 @@ function openVerification(id) {
             </div>
 
 
-            <div class="form-actions">
+            <div class="
+                form-actions
+            ">
+
 
                 <button
-                    class="btn btn-outline"
+                    class="
+                        btn
+                        btn-outline
+                    "
+
                     onclick="
-                        window.rentStuds.closeModal()
+                        window.rentStuds
+                        .closeModal()
                     ">
 
                     Cancel
@@ -2441,7 +2878,10 @@ function openVerification(id) {
 
 
                 <button
-                    class="btn btn-primary"
+                    class="
+                        btn
+                        btn-primary
+                    "
 
                     onclick="
                         window.rentStuds
@@ -2454,6 +2894,7 @@ function openVerification(id) {
 
                 </button>
 
+
             </div>
 
 
@@ -2465,7 +2906,9 @@ function openVerification(id) {
 
 
 
-async function scheduleVerification(id) {
+async function scheduleVerification(
+    id
+) {
 
     const date =
         document.getElementById(
@@ -2479,10 +2922,13 @@ async function scheduleVerification(id) {
         ).value;
 
 
-    if (!date || !time) {
+    if (
+        !date ||
+        !time
+    ) {
 
         toast(
-            "Select both date and time."
+            "Select a date and time."
         );
 
         return;
@@ -2520,13 +2966,17 @@ async function scheduleVerification(id) {
 
 
         toast(
-            "Verification call scheduled for ₹100."
+            "Verification call scheduled."
         );
 
 
-    } catch (error) {
+    } catch (
+        error
+    ) {
 
-        console.error(error);
+        console.error(
+            error
+        );
 
         toast(
             error.message
@@ -2538,21 +2988,18 @@ async function scheduleVerification(id) {
 
 
 
-/*
-    Demo admin action.
-    In the production version this will be
-    performed by your Rent Studs admin panel.
-*/
-
-
-async function demoVerify(id) {
+async function demoVerify(
+    id
+) {
 
     if (
         !confirm(
-            "Mark this property as VERIFIED?"
+            "Mark this listing as VERIFIED?"
         )
     ) {
+
         return;
+
     }
 
 
@@ -2580,13 +3027,17 @@ async function demoVerify(id) {
 
 
         toast(
-            "Property verified."
+            "Listing verified."
         );
 
 
-    } catch (error) {
+    } catch (
+        error
+    ) {
 
-        console.error(error);
+        console.error(
+            error
+        );
 
         toast(
             error.message
@@ -2609,13 +3060,20 @@ function studentHome() {
 
         <div>
 
+
             ${topbar()}
 
 
-            <main class="container page">
+            <main class="
+                container
+                page
+            ">
 
 
-                <div class="heading">
+                <div class="
+                    heading
+                ">
+
 
                     <div>
 
@@ -2626,20 +3084,27 @@ function studentHome() {
                         <p>
 
                             Verified accommodation
-                            around MITS Gwalior.
+                            around MITS.
 
                         </p>
 
                     </div>
 
+
                 </div>
 
 
 
-                <div class="tabs">
+                <div class="
+                    tabs
+                ">
+
 
                     <button
-                        class="tab active"
+                        class="
+                            tab
+                            active
+                        "
                         data-type="">
 
                         All Stays
@@ -2648,7 +3113,9 @@ function studentHome() {
 
 
                     <button
-                        class="tab"
+                        class="
+                            tab
+                        "
                         data-type="Hostel">
 
                         Hostel
@@ -2657,7 +3124,9 @@ function studentHome() {
 
 
                     <button
-                        class="tab"
+                        class="
+                            tab
+                        "
                         data-type="PG">
 
                         PG
@@ -2666,24 +3135,31 @@ function studentHome() {
 
 
                     <button
-                        class="tab"
+                        class="
+                            tab
+                        "
                         data-type="House Room">
 
                         House Rooms
 
                     </button>
 
+
                 </div>
 
 
 
-                <div class="search-row">
+                <div class="
+                    search-row
+                ">
+
 
                     <input
                         id="student-search"
                         class="search"
+
                         placeholder="
-                            Search by area or property...
+                            Search area or property...
                         ">
 
 
@@ -2696,24 +3172,34 @@ function studentHome() {
                         </option>
 
                         <option value="priceAsc">
+
                             Lowest Price
+
                         </option>
 
                         <option value="priceDesc">
+
                             Highest Price
+
                         </option>
 
                         <option value="distance">
+
                             Closest to MITS
+
                         </option>
 
+
                     </select>
+
 
                 </div>
 
 
 
-                <div class="filters">
+                <div class="
+                    filters
+                ">
 
 
                     <select
@@ -2862,6 +3348,7 @@ function studentHome() {
 
             ${bottomNav("home")}
 
+
         </div>
 
     `;
@@ -2879,78 +3366,81 @@ function setupStudentFilters() {
 
     const filterState = {
 
-        type: ""
+        type:
+            ""
 
     };
 
 
     document
         .querySelectorAll(".tab")
-        .forEach(tab => {
+        .forEach(
+            tab => {
 
-            tab.addEventListener(
-                "click",
-                () => {
+                tab.addEventListener(
+                    "click",
+                    () => {
 
-                    document
-                        .querySelectorAll(".tab")
-                        .forEach(
-                            item =>
-                                item.classList
-                                    .remove(
-                                        "active"
-                                    )
+                        document
+                            .querySelectorAll(
+                                ".tab"
+                            )
+                            .forEach(
+                                item =>
+                                    item.classList
+                                        .remove(
+                                            "active"
+                                        )
+                            );
+
+
+                        tab.classList.add(
+                            "active"
                         );
 
 
-                    tab.classList.add(
-                        "active"
-                    );
+                        filterState.type =
+                            tab.dataset.type;
 
 
-                    filterState.type =
-                        tab.dataset.type;
+                        applyStudentFilters(
+                            filterState
+                        );
 
+                    }
+                );
 
-                    applyStudentFilters(
-                        filterState
-                    );
-
-                }
-            );
-
-        });
+            }
+        );
 
 
     [
 
         "#student-search",
-
         "#student-sort",
-
         "#filter-sharing",
-
         "#filter-smoking",
-
         "#filter-food",
-
         "#filter-facility",
-
         "#filter-price"
 
-    ].forEach(selector => {
+    ].forEach(
+        selector => {
 
-        document
-            .querySelector(selector)
-            ?.addEventListener(
-                "input",
-                () =>
-                    applyStudentFilters(
-                        filterState
-                    )
-            );
+            document
+                .querySelector(
+                    selector
+                )
+                ?.addEventListener(
+                    "input",
+                    () =>
+                        applyStudentFilters(
+                            filterState
+                        )
+                );
 
-    });
+        }
+    );
 
 
     applyStudentFilters(
@@ -2962,7 +3452,7 @@ function setupStudentFilters() {
 
 
 /* ==========================================
-   FILTER LOGIC
+   FILTER
 ========================================== */
 
 
@@ -2970,10 +3460,10 @@ function applyStudentFilters(
     filterState
 ) {
 
-    let data =
+    let listings =
         state.listings.filter(
-            l =>
-                l.verified === true
+            listing =>
+                listing.verified
         );
 
 
@@ -2981,7 +3471,8 @@ function applyStudentFilters(
         (
             document.querySelector(
                 "#student-search"
-            )?.value || ""
+            )?.value ||
+            ""
         )
         .toLowerCase();
 
@@ -2989,48 +3480,56 @@ function applyStudentFilters(
     const sharing =
         document.querySelector(
             "#filter-sharing"
-        )?.value || "";
+        )?.value ||
+        "";
 
 
     const smoking =
         document.querySelector(
             "#filter-smoking"
-        )?.value || "";
+        )?.value ||
+        "";
 
 
     const food =
         document.querySelector(
             "#filter-food"
-        )?.value || "";
+        )?.value ||
+        "";
 
 
     const facility =
         document.querySelector(
             "#filter-facility"
-        )?.value || "";
+        )?.value ||
+        "";
 
 
-    const price =
+    const maxPrice =
         Number(
             document.querySelector(
                 "#filter-price"
-            )?.value || 0
+            )?.value ||
+            0
         );
 
 
     const sort =
         document.querySelector(
             "#student-sort"
-        )?.value || "";
+        )?.value ||
+        "";
 
 
 
-    if (filterState.type) {
+    if (
+        filterState.type
+    ) {
 
-        data =
-            data.filter(
-                l =>
-                    l.type ===
+        listings =
+            listings.filter(
+                listing =>
+                    listing.type ===
                     filterState.type
             );
 
@@ -3039,24 +3538,29 @@ function applyStudentFilters(
 
     if (search) {
 
-        data =
-            data.filter(
-                l =>
+        listings =
+            listings.filter(
+                listing =>
 
                     (
-                        l.title || ""
+                        listing.title ||
+                        ""
                     )
                     .toLowerCase()
-                    .includes(search)
+                    .includes(
+                        search
+                    )
 
                     ||
 
                     (
-                        l.location || ""
+                        listing.location ||
+                        ""
                     )
                     .toLowerCase()
-                    .includes(search)
-
+                    .includes(
+                        search
+                    )
             );
 
     }
@@ -3064,10 +3568,10 @@ function applyStudentFilters(
 
     if (sharing) {
 
-        data =
-            data.filter(
-                l =>
-                    l.sharing ===
+        listings =
+            listings.filter(
+                listing =>
+                    listing.sharing ===
                     sharing
             );
 
@@ -3076,10 +3580,10 @@ function applyStudentFilters(
 
     if (smoking) {
 
-        data =
-            data.filter(
-                l =>
-                    l.smoking ===
+        listings =
+            listings.filter(
+                listing =>
+                    listing.smoking ===
                     smoking
             );
 
@@ -3088,10 +3592,10 @@ function applyStudentFilters(
 
     if (food) {
 
-        data =
-            data.filter(
-                l =>
-                    l.food ===
+        listings =
+            listings.filter(
+                listing =>
+                    listing.food ===
                     food
             );
 
@@ -3100,11 +3604,11 @@ function applyStudentFilters(
 
     if (facility) {
 
-        data =
-            data.filter(
-                l =>
+        listings =
+            listings.filter(
+                listing =>
                     (
-                        l.facilities ||
+                        listing.facilities ||
                         []
                     ).includes(
                         facility
@@ -3114,14 +3618,16 @@ function applyStudentFilters(
     }
 
 
-    if (price) {
+    if (maxPrice) {
 
-        data =
-            data.filter(
-                l =>
+        listings =
+            listings.filter(
+                listing =>
                     Number(
-                        l.price || 0
-                    ) <= price
+                        listing.price ||
+                        0
+                    ) <=
+                    maxPrice
             );
 
     }
@@ -3132,11 +3638,15 @@ function applyStudentFilters(
         "priceAsc"
     ) {
 
-        data.sort(
+        listings.sort(
             (a,b) =>
-                (a.price || 0)
+                Number(
+                    a.price || 0
+                )
                 -
-                (b.price || 0)
+                Number(
+                    b.price || 0
+                )
         );
 
     }
@@ -3147,11 +3657,15 @@ function applyStudentFilters(
         "priceDesc"
     ) {
 
-        data.sort(
+        listings.sort(
             (a,b) =>
-                (b.price || 0)
+                Number(
+                    b.price || 0
+                )
                 -
-                (a.price || 0)
+                Number(
+                    a.price || 0
+                )
         );
 
     }
@@ -3162,51 +3676,73 @@ function applyStudentFilters(
         "distance"
     ) {
 
-        data.sort(
+        listings.sort(
             (a,b) =>
-                (a.distance || 0)
+                Number(
+                    a.distance || 0
+                )
                 -
-                (b.distance || 0)
+                Number(
+                    b.distance || 0
+                )
         );
 
     }
 
 
     const root =
-        document.querySelector(
-            "#student-results"
+        document.getElementById(
+            "student-results"
         );
 
 
     if (!root) return;
 
 
-    if (!data.length) {
+    if (!listings.length) {
 
         root.innerHTML = `
 
             <div
-                class="card empty"
+                class="
+                    card
+                    empty
+                "
+
                 style="
                     grid-column:
-                    1/-1;
+                    1 / -1;
                 ">
 
-                <div class="empty-icon">
+
+                <div class="
+                    empty-icon
+                ">
+
                     🔎
+
                 </div>
 
+
                 <h2>
+
                     No Verified Stays Match
+
                 </h2>
 
+
                 <p>
-                    Try changing your filters.
+
+                    Try changing
+                    your filters.
+
                 </p>
+
 
             </div>
 
         `;
+
 
         return;
 
@@ -3214,7 +3750,7 @@ function applyStudentFilters(
 
 
     root.innerHTML =
-        data
+        listings
             .map(
                 studentCard
             )
@@ -3229,25 +3765,45 @@ function applyStudentFilters(
 ========================================== */
 
 
-function studentCard(listing) {
+function studentCard(
+    listing
+) {
 
     const image =
         listing.media?.find(
-            m =>
-                m.kind ===
+            media =>
+                media.kind ===
                 "image"
         )?.url;
 
 
     const totalCost =
 
-        (listing.price || 0) +
+        Number(
+            listing.price ||
+            0
+        )
 
-        (listing.electricity || 0) +
+        +
 
-        (listing.wifi || 0) +
+        Number(
+            listing.electricity ||
+            0
+        )
 
-        (listing.maintenance || 0);
+        +
+
+        Number(
+            listing.wifi ||
+            0
+        )
+
+        +
+
+        Number(
+            listing.maintenance ||
+            0
+        );
 
 
     return `
@@ -3258,7 +3814,9 @@ function studentCard(listing) {
         ">
 
 
-            <div class="listing-media">
+            <div class="
+                listing-media
+            ">
 
 
                 ${
@@ -3277,10 +3835,9 @@ function studentCard(listing) {
 
                     :
 
-                    `<div
-                        class="
-                            media-placeholder
-                        ">
+                    `<div class="
+                        media-placeholder
+                    ">
 
                         🏠
 
@@ -3289,8 +3846,9 @@ function studentCard(listing) {
                 }
 
 
-                <span
-                    class="media-chip">
+                <span class="
+                    media-chip
+                ">
 
                     ${escapeHTML(
                         listing.type
@@ -3303,10 +3861,14 @@ function studentCard(listing) {
 
 
 
-            <div class="listing-body">
+            <div class="
+                listing-body
+            ">
 
 
-                <div class="badges">
+                <div class="
+                    badges
+                ">
 
                     <span class="
                         badge
@@ -3329,7 +3891,9 @@ function studentCard(listing) {
                 </h3>
 
 
-                <div class="meta">
+                <div class="
+                    meta
+                ">
 
                     📍
 
@@ -3340,7 +3904,8 @@ function studentCard(listing) {
                     •
 
                     ${
-                        listing.distance || 0
+                        listing.distance ||
+                        0
                     }
 
                     km
@@ -3348,9 +3913,14 @@ function studentCard(listing) {
                 </div>
 
 
-                <div class="price-row">
+                <div class="
+                    price-row
+                ">
 
-                    <span class="price">
+
+                    <span class="
+                        price
+                    ">
 
                         ₹${money(
                             listing.price
@@ -3359,7 +3929,9 @@ function studentCard(listing) {
                     </span>
 
 
-                    <span class="small">
+                    <span class="
+                        small
+                    ">
 
                         ₹${money(
                             totalCost
@@ -3369,10 +3941,14 @@ function studentCard(listing) {
 
                     </span>
 
+
                 </div>
 
 
-                <div class="tags">
+                <div class="
+                    tags
+                ">
+
 
                     ${
                         (
@@ -3380,25 +3956,33 @@ function studentCard(listing) {
                             []
                         )
 
-                        .slice(0,4)
+                        .slice(
+                            0,
+                            4
+                        )
 
                         .map(
-                            facility =>
-                            `<span class="tag">
-                                ${escapeHTML(
-                                    facility
-                                )}
-                            </span>`
+                            item =>
+                                `<span class="tag">
+                                    ${escapeHTML(
+                                        item
+                                    )}
+                                </span>`
                         )
 
                         .join("")
                     }
 
+
                 </div>
 
 
                 <button
-                    class="btn btn-primary btn-block"
+                    class="
+                        btn
+                        btn-primary
+                        btn-block
+                    "
 
                     onclick="
                         window.rentStuds
@@ -3428,7 +4012,9 @@ function studentCard(listing) {
 ========================================== */
 
 
-function openStudent(id) {
+function openStudent(
+    id
+) {
 
     state.selectedListing =
         id;
@@ -3439,7 +4025,7 @@ function openStudent(id) {
 
 
 
-async function studentDetailsPage() {
+function studentDetailsPage() {
 
     const listing =
         state.listings.find(
@@ -3452,60 +4038,77 @@ async function studentDetailsPage() {
     if (!listing) {
 
         return `
+
             <div class="
                 container
                 page
             ">
+
                 <div class="
                     card
                     empty
                 ">
+
                     <h2>
                         Listing not found
                     </h2>
+
                 </div>
+
             </div>
+
         `;
 
     }
 
 
     const media =
-        listing.media || [];
+        listing.media ||
+        [];
 
 
     const images =
         media.filter(
-            m =>
-                m.kind ===
+            item =>
+                item.kind ===
                 "image"
         );
 
 
-    const videos =
-        media.filter(
-            m =>
-                m.kind ===
-                "video"
+    const totalCost =
+
+        Number(
+            listing.price ||
+            0
+        )
+
+        +
+
+        Number(
+            listing.electricity ||
+            0
+        )
+
+        +
+
+        Number(
+            listing.wifi ||
+            0
+        )
+
+        +
+
+        Number(
+            listing.maintenance ||
+            0
         );
 
 
     const reviews =
         state.reviews[
             listing.id
-        ] || [];
-
-
-    const totalCost =
-
-        (listing.price || 0) +
-
-        (listing.electricity || 0) +
-
-        (listing.wifi || 0) +
-
-        (listing.maintenance || 0);
-
+        ] ||
+        [];
 
 
     return `
@@ -3516,19 +4119,26 @@ async function studentDetailsPage() {
             ${topbar()}
 
 
-            <main class="container page">
+            <main class="
+                container
+                page
+            ">
 
 
                 <button
-                    class="btn btn-outline"
+                    class="
+                        btn
+                        btn-outline
+                    "
 
                     onclick="
-                        window.rentStuds.go(
+                        window.rentStuds
+                        .go(
                             'studentHome'
                         )
                     ">
 
-                    ← Back to Stays
+                    ← Back
 
                 </button>
 
@@ -3537,16 +4147,23 @@ async function studentDetailsPage() {
 
 
 
-                <div class="detail-grid">
+                <div class="
+                    detail-grid
+                ">
 
 
                     <section>
 
 
-                        <div class="gallery">
+                        <div class="
+                            gallery
+                        ">
 
 
-                            <div class="gallery-main">
+                            <div class="
+                                gallery-main
+                            ">
+
 
                                 ${
                                     images[0]
@@ -3562,103 +4179,75 @@ async function studentDetailsPage() {
 
                                     :
 
-                                    `<div
-                                        class="
-                                            media-placeholder
-                                        ">
-
+                                    `<div class="
+                                        media-placeholder
+                                    ">
                                         🏠
-
                                     </div>`
 
                                 }
 
+
                             </div>
 
 
+                            <div class="
+                                gallery-side
+                            ">
 
-                            <div class="gallery-side">
 
+                                ${
+                                    images[1]
 
-                                <div>
+                                    ?
 
-                                    ${
-                                        images[1]
+                                    `<div>
 
-                                        ?
-
-                                        `<img
+                                        <img
                                             src="${escapeHTML(
                                                 images[1].url
                                             )}"
                                             alt=""
-                                        >`
+                                        >
 
-                                        :
+                                    </div>`
 
-                                        videos[0]
+                                    :
 
-                                        ?
+                                    `<div class="
+                                        media-placeholder
+                                    ">
+                                        Room
+                                    </div>`
 
-                                        `<video
-                                            src="${escapeHTML(
-                                                videos[0].url
-                                            )}"
-                                            controls>
-                                        </video>`
-
-                                        :
-
-                                        `<div class="
-                                            media-placeholder
-                                        ">
-                                            Room
-                                        </div>`
-
-                                    }
-
-                                </div>
+                                }
 
 
+                                ${
+                                    images[2]
 
-                                <div>
+                                    ?
 
-                                    ${
-                                        images[2]
+                                    `<div>
 
-                                        ?
-
-                                        `<img
+                                        <img
                                             src="${escapeHTML(
                                                 images[2].url
                                             )}"
                                             alt=""
-                                        >`
+                                        >
 
-                                        :
+                                    </div>`
 
-                                        videos[1]
+                                    :
 
-                                        ?
+                                    `<div class="
+                                        media-placeholder
+                                    ">
+                                        View
+                                    </div>`
 
-                                        `<video
-                                            src="${escapeHTML(
-                                                videos[1].url
-                                            )}"
-                                            controls>
-                                        </video>`
-
-                                        :
-
-                                        `<div class="
-                                            media-placeholder
-                                        ">
-                                            View
-                                        </div>`
-
-                                    }
-
-                                </div>
+                                }
 
 
                             </div>
@@ -3674,7 +4263,10 @@ async function studentDetailsPage() {
                         ">
 
 
-                            <div class="badges">
+                            <div class="
+                                badges
+                            ">
+
 
                                 <span class="
                                     badge
@@ -3697,7 +4289,9 @@ async function studentDetailsPage() {
 
                                 </span>
 
+
                             </div>
+
 
 
                             <h2>
@@ -3709,7 +4303,10 @@ async function studentDetailsPage() {
                             </h2>
 
 
-                            <div class="meta">
+
+                            <div class="
+                                meta
+                            ">
 
                                 📍
 
@@ -3720,7 +4317,8 @@ async function studentDetailsPage() {
                                 •
 
                                 ${
-                                    listing.distance || 0
+                                    listing.distance ||
+                                    0
                                 }
 
                                 km from MITS
@@ -3728,18 +4326,27 @@ async function studentDetailsPage() {
                             </div>
 
 
-                            <div class="price-row">
 
-                                <span class="price">
+                            <div class="
+                                price-row
+                            ">
+
+
+                                <span class="
+                                    price
+                                ">
 
                                     ₹${money(
                                         listing.price
-                                    )}/month
+                                    )}
+                                    /month
 
                                 </span>
 
 
-                                <span class="small">
+                                <span class="
+                                    small
+                                ">
 
                                     ${escapeHTML(
                                         listing.sharing
@@ -3747,11 +4354,15 @@ async function studentDetailsPage() {
 
                                 </span>
 
+
                             </div>
 
 
+
                             <h3>
+
                                 About this Stay
+
                             </h3>
 
 
@@ -3759,7 +4370,7 @@ async function studentDetailsPage() {
 
                                 ${escapeHTML(
                                     listing.description ||
-                                    "No description provided."
+                                    "No description."
                                 )}
 
                             </p>
@@ -3767,45 +4378,61 @@ async function studentDetailsPage() {
 
 
                             <h3>
+
                                 Facilities
+
                             </h3>
 
 
-                            <div class="facilities">
+                            <div class="
+                                facilities
+                            ">
+
 
                                 ${
                                     (
                                         listing.facilities ||
                                         []
                                     )
+
                                     .map(
-                                        facility =>
-                                        `<div class="
-                                            facility
-                                        ">
-
-                                            ✓
-                                            ${escapeHTML(
+                                        item =>
+                                            `<div class="
                                                 facility
-                                            )}
+                                            ">
 
-                                        </div>`
+                                                ✓
+                                                ${escapeHTML(
+                                                    item
+                                                )}
+
+                                            </div>`
                                     )
+
                                     .join("")
                                 }
+
 
                             </div>
 
 
 
                             <h3>
+
                                 Important Information
+
                             </h3>
 
 
-                            <div class="tags">
 
-                                <span class="tag">
+                            <div class="
+                                tags
+                            ">
+
+
+                                <span class="
+                                    tag
+                                ">
 
                                     🕒
                                     ${escapeHTML(
@@ -3816,7 +4443,9 @@ async function studentDetailsPage() {
                                 </span>
 
 
-                                <span class="tag">
+                                <span class="
+                                    tag
+                                ">
 
                                     🚭
                                     ${escapeHTML(
@@ -3826,7 +4455,9 @@ async function studentDetailsPage() {
                                 </span>
 
 
-                                <span class="tag">
+                                <span class="
+                                    tag
+                                ">
 
                                     🍱
                                     ${escapeHTML(
@@ -3836,7 +4467,9 @@ async function studentDetailsPage() {
                                 </span>
 
 
-                                <span class="tag">
+                                <span class="
+                                    tag
+                                ">
 
                                     👥
                                     ${escapeHTML(
@@ -3844,6 +4477,7 @@ async function studentDetailsPage() {
                                     )}
 
                                 </span>
+
 
                             </div>
 
@@ -3859,7 +4493,9 @@ async function studentDetailsPage() {
 
 
                             <h2>
+
                                 Student Reviews
+
                             </h2>
 
 
@@ -3868,49 +4504,48 @@ async function studentDetailsPage() {
 
                                 ?
 
-                                reviews.map(
-                                    review => `
+                                reviews
 
-                                        <div class="review"
-                                            style="
-                                                padding:
-                                                15px 0;
-                                                border-bottom:
-                                                1px solid
-                                                var(--border);
+                                    .map(
+                                        review => `
+
+                                            <div class="
+                                                review
                                             ">
 
-                                            <strong>
+                                                <strong>
 
-                                                ${escapeHTML(
-                                                    review.name ||
-                                                    "Student"
-                                                )}
+                                                    ${escapeHTML(
+                                                        review.name ||
+                                                        "Student"
+                                                    )}
 
-                                            </strong>
+                                                </strong>
 
 
-                                            <div>
+                                                <div>
 
-                                                ⭐
-                                                ${review.rating}
-                                                /5
+                                                    ⭐
+                                                    ${review.rating}
+                                                    /5
+
+                                                </div>
+
+
+                                                <p>
+
+                                                    ${escapeHTML(
+                                                        review.text
+                                                    )}
+
+                                                </p>
 
                                             </div>
 
+                                        `
+                                    )
 
-                                            <p>
-
-                                                ${escapeHTML(
-                                                    review.text
-                                                )}
-
-                                            </p>
-
-                                        </div>
-
-                                    `
-                                ).join("")
+                                    .join("")
 
                                 :
 
@@ -3928,7 +4563,9 @@ async function studentDetailsPage() {
 
 
 
-                    <aside class="sticky-card">
+                    <aside class="
+                        sticky-card
+                    ">
 
 
                         <div class="
@@ -3936,7 +4573,9 @@ async function studentDetailsPage() {
                         ">
 
 
-                            <div class="cost-label">
+                            <div class="
+                                cost-label
+                            ">
 
                                 Estimated Monthly Cost
 
@@ -3963,9 +4602,10 @@ async function studentDetailsPage() {
                                 ">
 
                                 Rent + listed recurring
-                                expenses
+                                expenses.
 
                             </div>
+
 
                         </div>
 
@@ -3978,7 +4618,9 @@ async function studentDetailsPage() {
 
 
                             <h2>
+
                                 Interested?
+
                             </h2>
 
 
@@ -4033,7 +4675,7 @@ async function studentDetailsPage() {
 
 
 /* ==========================================
-   CHAT CREATION
+   CHAT
 ========================================== */
 
 
@@ -4043,16 +4685,20 @@ async function startChat(
 
     const listing =
         state.listings.find(
-            l =>
-                l.id ===
+            item =>
+                item.id ===
                 listingId
         );
 
 
-    if (!listing) return;
+    if (!listing) {
+
+        return;
+
+    }
 
 
-    const chatQuery =
+    const q =
         query(
 
             collection(
@@ -4076,58 +4722,31 @@ async function startChat(
 
 
     const snapshot =
-        await new Promise(
-            resolve => {
-
-                let firstRun =
-                    true;
-
-
-                const unsubscribe =
-                    onSnapshot(
-                        chatQuery,
-                        snap => {
-
-                            if (
-                                firstRun
-                            ) {
-
-                                firstRun =
-                                    false;
-
-                                unsubscribe();
-
-                                resolve(
-                                    snap
-                                );
-
-                            }
-
-                        }
-                    );
-
-            }
+        await getDocs(
+            q
         );
 
 
-    let chat;
+    let chatId;
 
 
     if (
         !snapshot.empty
     ) {
 
-        chat =
-            snapshot.docs[0];
+        chatId =
+            snapshot.docs[0].id;
 
     } else {
 
-        const chatRef =
+        const created =
             await addDoc(
+
                 collection(
                     db,
                     "chats"
                 ),
+
                 {
 
                     listingId:
@@ -4143,8 +4762,11 @@ async function startChat(
                         state.user.uid,
 
                     participantIds: [
+
                         state.user.uid,
+
                         listing.ownerId
+
                     ],
 
                     studentAcceptedNumber:
@@ -4172,19 +4794,18 @@ async function startChat(
                         serverTimestamp()
 
                 }
+
             );
 
 
-        chat = {
-            id:
-                chatRef.id
-        };
+        chatId =
+            created.id;
 
     }
 
 
     state.selectedChat =
-        chat.id;
+        chatId;
 
 
     go("chat");
@@ -4202,8 +4823,8 @@ function chatPage() {
 
     const selected =
         state.chats.find(
-            c =>
-                c.id ===
+            chat =>
+                chat.id ===
                 state.selectedChat
         )
         ||
@@ -4231,6 +4852,7 @@ function chatPage() {
 
         <div>
 
+
             ${topbar()}
 
 
@@ -4242,6 +4864,7 @@ function chatPage() {
 
                 <div class="heading">
 
+
                     <div>
 
                         <h1>
@@ -4249,11 +4872,14 @@ function chatPage() {
                         </h1>
 
                         <p>
-                            Conversations stay
-                            connected to each property.
+
+                            Talk about the
+                            property before booking.
+
                         </p>
 
                     </div>
+
 
                 </div>
 
@@ -4265,67 +4891,78 @@ function chatPage() {
                 ">
 
 
-                    <div class="chat-list">
+                    <div class="
+                        chat-list
+                    ">
+
 
                         ${
                             state.chats.length
 
                             ?
 
-                            state.chats.map(
-                                chat => `
+                            state.chats
+                                .map(
+                                    chat => `
 
-                                    <div
-                                        class="
-                                            chat-item
-                                            ${
-                                                selected?.id ===
-                                                chat.id
-                                                ? "active"
-                                                : ""
-                                            }
-                                        "
+                                        <div
+                                            class="
+                                                chat-item
+                                                ${
+                                                    selected?.id ===
+                                                    chat.id
+                                                    ? "active"
+                                                    : ""
+                                                }
+                                            "
 
-                                        onclick="
-                                            window.rentStuds
-                                            .selectChat(
-                                                '${chat.id}'
-                                            )
-                                        ">
-
-
-                                        <strong>
-
-                                            ${escapeHTML(
-                                                chat.listingTitle ||
-                                                "Property"
-                                            )}
-
-                                        </strong>
+                                            onclick="
+                                                window.rentStuds
+                                                .selectChat(
+                                                    '${chat.id}'
+                                                )
+                                            ">
 
 
-                                        <p>
+                                            <strong>
 
-                                            ${escapeHTML(
-                                                chat.lastMessage ||
-                                                "Start conversation"
-                                            )}
+                                                ${escapeHTML(
+                                                    chat.listingTitle ||
+                                                    "Property"
+                                                )}
 
-                                        </p>
+                                            </strong>
 
-                                    </div>
 
-                                `
-                            ).join("")
+                                            <p>
+
+                                                ${escapeHTML(
+                                                    chat.lastMessage ||
+                                                    "Start conversation"
+                                                )}
+
+                                            </p>
+
+
+                                        </div>
+
+                                    `
+                                )
+
+                                .join("")
 
                             :
 
                             `
 
-                                <div class="empty">
+                                <div class="
+                                    empty
+                                ">
 
                                     <p>
+
                                         No conversations yet.
+
                                     </p>
 
                                 </div>
@@ -4334,11 +4971,14 @@ function chatPage() {
 
                         }
 
+
                     </div>
 
 
 
-                    <div class="chat-main">
+                    <div class="
+                        chat-main
+                    ">
 
 
                         ${
@@ -4352,10 +4992,14 @@ function chatPage() {
 
                             :
 
-                            `<div class="empty">
+                            `<div class="
+                                empty
+                            ">
 
                                 <p>
+
                                     Select a conversation.
+
                                 </p>
 
                             </div>`
@@ -4373,6 +5017,7 @@ function chatPage() {
 
 
             ${bottomNav("chat")}
+
 
         </div>
 
@@ -4397,19 +5042,27 @@ function renderChatWindow(
 
 
     const myAccepted =
-        state.role === "student"
-            ? chat.studentAcceptedNumber
-            : chat.ownerAcceptedNumber;
+        state.role ===
+        "student"
+
+        ?
+
+        chat.studentAcceptedNumber
+
+        :
+
+        chat.ownerAcceptedNumber;
 
 
     return `
 
-
-        <div class="chat-header">
+        <div class="
+            chat-header
+        ">
 
             ${escapeHTML(
                 chat.listingTitle ||
-                "Property Conversation"
+                "Property"
             )}
 
         </div>
@@ -4418,7 +5071,9 @@ function renderChatWindow(
 
         <div
             id="messages"
-            class="messages">
+            class="
+                messages
+            ">
 
 
             ${
@@ -4430,16 +5085,15 @@ function renderChatWindow(
                     .map(
                         message => `
 
-                            <div
-                                class="
-                                    bubble
-                                    ${
-                                        message.senderId ===
-                                        state.user.uid
-                                        ? "mine"
-                                        : ""
-                                    }
-                                ">
+                            <div class="
+                                bubble
+                                ${
+                                    message.senderId ===
+                                    state.user.uid
+                                    ? "mine"
+                                    : ""
+                                }
+                            ">
 
                                 ${escapeHTML(
                                     message.text
@@ -4455,8 +5109,10 @@ function renderChatWindow(
 
                 `<div
                     style="
-                        color:var(--muted);
-                        text-align:center;
+                        color:
+                        var(--muted);
+                        text-align:
+                        center;
                     ">
 
                     Start the conversation.
@@ -4470,34 +5126,40 @@ function renderChatWindow(
 
 
 
-        <div
-            class="
-                card
-                phone-box
-            ">
+        <div class="
+            card
+            phone-box
+        ">
 
 
             <div
                 style="
-                    display:flex;
+                    display:
+                    flex;
                     justify-content:
                     space-between;
-                    align-items:center;
-                    gap:10px;
+                    align-items:
+                    center;
+                    gap:
+                    10px;
                 ">
 
 
                 <div>
 
                     <strong>
+
                         Phone Number
+
                     </strong>
 
 
-                    <div class="small">
+                    <div class="
+                        small
+                    ">
 
-                        Revealed only after
-                        both people agree.
+                        Revealed only
+                        when both agree.
 
                     </div>
 
@@ -4505,7 +5167,10 @@ function renderChatWindow(
 
 
                 <button
-                    class="btn btn-soft"
+                    class="
+                        btn
+                        btn-soft
+                    "
 
                     onclick="
                         window.rentStuds
@@ -4534,39 +5199,30 @@ function renderChatWindow(
 
                 `
 
-                <div
-                    class="
-                        notice
-                        mt-sm
-                    "
-                    style="
-                        background:
-                        var(--success-bg);
-                        color:
-                        var(--success);
-                    ">
+                <div class="
+                    notice
+                    mt-sm
+                "
+                style="
+                    background:
+                    var(--green-soft);
+                    color:
+                    var(--green);
+                ">
 
-                    <strong>
-                        Phone numbers unlocked
-                    </strong>
-
+                    Phone numbers unlocked.
 
                     <br>
 
-
                     Student:
-
                     ${escapeHTML(
                         chat.studentPhone ||
                         "Not added"
                     )}
 
-
                     <br>
 
-
                     Provider:
-
                     ${escapeHTML(
                         chat.ownerPhone ||
                         "Not added"
@@ -4592,21 +5248,25 @@ function renderChatWindow(
                 `
 
                 <div
-                    class="
-                        mt-sm
-                    "
                     style="
-                        display:flex;
+                        display:
+                        flex;
                         justify-content:
                         space-between;
-                        align-items:center;
-                        gap:10px;
+                        align-items:
+                        center;
+                        gap:
+                        10px;
+                        margin-top:
+                        10px;
                     ">
 
 
-                    <span class="small">
+                    <span class="
+                        small
+                    ">
 
-                        Booking Status:
+                        Status:
 
                         ${
                             chat.booked
@@ -4655,44 +5315,6 @@ function renderChatWindow(
             }
 
 
-
-            ${
-                state.role ===
-                "student" &&
-                chat.booked
-
-                ?
-
-                `
-
-                <button
-                    class="
-                        btn
-                        btn-primary
-                        btn-block
-                        mt-sm
-                    "
-
-                    onclick="
-                        window.rentStuds
-                        .openReview(
-                            '${chat.listingId}'
-                        )
-                    ">
-
-                    Leave Review
-
-                </button>
-
-                `
-
-                :
-
-                ""
-
-            }
-
-
         </div>
 
 
@@ -4704,6 +5326,7 @@ function renderChatWindow(
 
             <input
                 id="chat-input"
+
                 placeholder="
                     Write a message...
                 "
@@ -4737,7 +5360,6 @@ function renderChatWindow(
 
         </div>
 
-
     `;
 
 }
@@ -4762,7 +5384,11 @@ function loadMessages(
     }
 
 
-    const messagesQuery =
+    state.messages =
+        [];
+
+
+    const q =
         query(
 
             collection(
@@ -4780,29 +5406,34 @@ function loadMessages(
 
     state.unsubscribeMessages =
         onSnapshot(
-
-            messagesQuery,
+            q,
 
             snapshot => {
 
                 state.messages =
                     snapshot.docs.map(
-                        doc => ({
-                            id:
-                                doc.id,
+                        item => ({
 
-                            ...doc.data()
+                            id:
+                                item.id,
+
+                            ...item.data()
+
                         })
                     );
 
 
                 const root =
-                    document.querySelector(
-                        "#messages"
+                    document.getElementById(
+                        "messages"
                     );
 
 
-                if (!root) return;
+                if (!root) {
+
+                    return;
+
+                }
 
 
                 root.innerHTML =
@@ -4844,8 +5475,11 @@ function loadMessages(
                 );
 
                 toast(
-                    "Could not load messages."
+                    "Could not load chat messages."
                 );
+
+                state.messages =
+                    [];
 
             }
 
@@ -4889,8 +5523,8 @@ async function sendMessage(
 ) {
 
     const input =
-        document.querySelector(
-            "#chat-input"
+        document.getElementById(
+            "chat-input"
         );
 
 
@@ -4951,13 +5585,16 @@ async function sendMessage(
         input.value = "";
 
 
-    } catch (error) {
+    } catch (
+        error
+    ) {
 
-        console.error(error);
+        console.error(
+            error
+        );
 
         toast(
-            error.message ||
-            "Message failed."
+            "Message could not be sent."
         );
 
     }
@@ -4967,7 +5604,7 @@ async function sendMessage(
 
 
 /* ==========================================
-   PHONE NUMBER SHARING
+   ACCEPT NUMBER
 ========================================== */
 
 
@@ -4975,42 +5612,30 @@ async function acceptNumber(
     chatId
 ) {
 
+    const phone =
+        state.profile?.phone ||
+        "";
+
+
+    if (!phone) {
+
+        toast(
+            "Add your phone number in Profile first."
+        );
+
+        go("profile");
+
+        return;
+
+    }
+
+
     try {
 
-        const chat =
-            state.chats.find(
-                item =>
-                    item.id ===
-                    chatId
-            );
-
-
-        if (!chat) {
-
-            return;
-
-        }
-
-
-        const phone =
-            state.profile?.phone ||
-            "";
-
-
-        if (!phone) {
-
-            toast(
-                "Add your phone number in Profile first."
-            );
-
-            go("profile");
-
-            return;
-
-        }
-
-
-        if (state.role === "student") {
+        if (
+            state.role ===
+            "student"
+        ) {
 
             await updateDoc(
 
@@ -5062,9 +5687,13 @@ async function acceptNumber(
         );
 
 
-    } catch (error) {
+    } catch (
+        error
+    ) {
 
-        console.error(error);
+        console.error(
+            error
+        );
 
         toast(
             error.message
@@ -5090,26 +5719,10 @@ async function toggleBooking(
 
         const chat =
             state.chats.find(
-                c =>
-                    c.id ===
+                item =>
+                    item.id ===
                     chatId
             );
-
-
-        if (!chat) return;
-
-
-        const update = {
-
-            booked:
-                value,
-
-            bookedAt:
-                value
-                ? new Date().toISOString()
-                : null
-
-        };
 
 
         await updateDoc(
@@ -5120,12 +5733,25 @@ async function toggleBooking(
                 chatId
             ),
 
-            update
+            {
+
+                booked:
+                    value,
+
+                bookedAt:
+                    value
+                    ? new Date()
+                        .toISOString()
+                    : null
+
+            }
 
         );
 
 
-        if (chat.listingId) {
+        if (
+            chat?.listingId
+        ) {
 
             await updateDoc(
 
@@ -5154,9 +5780,13 @@ async function toggleBooking(
         );
 
 
-    } catch (error) {
+    } catch (
+        error
+    ) {
 
-        console.error(error);
+        console.error(
+            error
+        );
 
         toast(
             error.message
@@ -5169,7 +5799,7 @@ async function toggleBooking(
 
 
 /* ==========================================
-   REVIEW
+   REVIEWS
 ========================================== */
 
 
@@ -5177,86 +5807,16 @@ function openReview(
     listingId
 ) {
 
-    const chat =
-        state.chats.find(
-            c =>
-                c.listingId ===
-                listingId &&
-                c.studentId ===
-                state.user.uid
-        );
-
-
-    if (
-        !chat ||
-        !chat.booked
-    ) {
-
-        toast(
-            "Review is available only after booking."
-        );
-
-        return;
-
-    }
-
-
-    let bookedTime =
-        new Date(
-            chat.bookedAt
-        ).getTime();
-
-
-    const thirtyDays =
-        30 *
-        24 *
-        60 *
-        60 *
-        1000;
-
-
-    if (
-        Date.now() -
-        bookedTime <
-        thirtyDays
-    ) {
-
-        const daysLeft =
-            Math.ceil(
-
-                (
-                    thirtyDays -
-                    (
-                        Date.now() -
-                        bookedTime
-                    )
-                )
-                /
-                (
-                    24 *
-                    60 *
-                    60 *
-                    1000
-                )
-
-            );
-
-
-        toast(
-            `Review unlocks after 30 days. ${daysLeft} day(s) remaining.`
-        );
-
-        return;
-
-    }
-
-
     showModal(`
 
-        <div class="modal-card">
+        <div class="
+            modal-card
+        ">
 
 
-            <div class="modal-header">
+            <div class="
+                modal-header
+            ">
 
                 <h2>
                     Leave a Review
@@ -5264,9 +5824,13 @@ function openReview(
 
 
                 <button
-                    class="close"
+                    class="
+                        close
+                    "
+
                     onclick="
-                        window.rentStuds.closeModal()
+                        window.rentStuds
+                        .closeModal()
                     ">
 
                     ×
@@ -5276,11 +5840,15 @@ function openReview(
             </div>
 
 
-            <div class="field">
+            <div class="
+                field
+            ">
+
 
                 <label>
                     Rating
                 </label>
+
 
                 <select
                     id="review-rating">
@@ -5315,25 +5883,37 @@ function openReview(
                 mt
             ">
 
+
                 <label>
                     Review
                 </label>
 
+
                 <textarea
                     id="review-text"
                     placeholder="
-                        How was your stay?
+                        Tell future students
+                        about your experience...
                     "></textarea>
+
 
             </div>
 
 
-            <div class="form-actions">
+            <div class="
+                form-actions
+            ">
+
 
                 <button
-                    class="btn btn-outline"
+                    class="
+                        btn
+                        btn-outline
+                    "
+
                     onclick="
-                        window.rentStuds.closeModal()
+                        window.rentStuds
+                        .closeModal()
                     ">
 
                     Cancel
@@ -5342,7 +5922,10 @@ function openReview(
 
 
                 <button
-                    class="btn btn-primary"
+                    class="
+                        btn
+                        btn-primary
+                    "
 
                     onclick="
                         window.rentStuds
@@ -5354,6 +5937,7 @@ function openReview(
                     Submit Review
 
                 </button>
+
 
             </div>
 
@@ -5377,16 +5961,16 @@ async function submitReview(
 
     const rating =
         Number(
-            document.querySelector(
-                "#review-rating"
-            )?.value || 5
+            document.getElementById(
+                "review-rating"
+            ).value
         );
 
 
     const text =
-        document.querySelector(
-            "#review-text"
-        )?.value.trim();
+        document.getElementById(
+            "review-text"
+        ).value.trim();
 
 
     if (!text) {
@@ -5442,9 +6026,13 @@ async function submitReview(
         );
 
 
-    } catch (error) {
+    } catch (
+        error
+    ) {
 
-        console.error(error);
+        console.error(
+            error
+        );
 
         toast(
             error.message
@@ -5467,6 +6055,7 @@ function profilePage() {
 
         <div>
 
+
             ${topbar()}
 
 
@@ -5483,7 +6072,10 @@ function profilePage() {
                     ">
 
 
-                    <div class="avatar">
+                    <div class="
+                        avatar
+                    ">
+
 
                         ${
                             state.profile?.photoURL
@@ -5503,6 +6095,7 @@ function profilePage() {
 
                         }
 
+
                     </div>
 
 
@@ -5516,7 +6109,9 @@ function profilePage() {
                     </h2>
 
 
-                    <p class="muted">
+                    <p class="
+                        muted
+                    ">
 
                         ${escapeHTML(
                             state.profile?.email ||
@@ -5529,26 +6124,36 @@ function profilePage() {
                     <br>
 
 
-                    <div class="field">
+                    <div class="
+                        field
+                    ">
+
 
                         <label>
                             Phone Number
                         </label>
 
+
                         <input
                             id="profile-phone"
+
                             value="${escapeHTML(
                                 state.profile?.phone ||
                                 ""
                             )}"
+
                             placeholder="
                                 Enter phone number
                             ">
 
+
                     </div>
 
 
-                    <div class="form-actions">
+                    <div class="
+                        form-actions
+                    ">
+
 
                         <button
                             class="
@@ -5565,6 +6170,7 @@ function profilePage() {
 
                         </button>
 
+
                     </div>
 
 
@@ -5574,8 +6180,8 @@ function profilePage() {
                     ">
 
                         Your phone number
-                        is revealed in chat only
-                        when both people agree.
+                        is revealed only after
+                        both people agree.
 
                     </div>
 
@@ -5605,10 +6211,9 @@ function profilePage() {
 async function saveProfile() {
 
     const phone =
-        document.querySelector(
-            "#profile-phone"
-        )?.value.trim() ||
-        "";
+        document.getElementById(
+            "profile-phone"
+        ).value.trim();
 
 
     try {
@@ -5640,399 +6245,19 @@ async function saveProfile() {
         );
 
 
-    } catch (error) {
+    } catch (
+        error
+    ) {
 
-        console.error(error);
+        console.error(
+            error
+        );
 
         toast(
             error.message
         );
 
     }
-
-}
-
-
-
-/* ==========================================
-   LOGOUT
-========================================== */
-
-
-async function logout() {
-
-    try {
-
-        await signOut(
-            auth
-        );
-
-
-        state.user =
-            null;
-
-        state.profile =
-            null;
-
-        state.role =
-            null;
-
-        state.page =
-            "landing";
-
-
-        if (
-            state.unsubscribeListings
-        ) {
-            state.unsubscribeListings();
-        }
-
-
-        if (
-            state.unsubscribeChats
-        ) {
-            state.unsubscribeChats();
-        }
-
-
-        if (
-            state.unsubscribeMessages
-        ) {
-            state.unsubscribeMessages();
-        }
-
-
-        render();
-
-
-    } catch (error) {
-
-        console.error(
-            error
-        );
-
-    }
-
-}
-
-
-
-/* ==========================================
-   DATA SUBSCRIPTIONS
-========================================== */
-
-
-function subscribeToData() {
-
-    if (
-        state.unsubscribeListings
-    ) {
-
-        state.unsubscribeListings();
-
-    }
-
-
-    if (
-        state.unsubscribeChats
-    ) {
-
-        state.unsubscribeChats();
-
-    }
-
-
-    let listingQuery;
-
-
-    if (state.role === "owner") {
-
-        listingQuery =
-            query(
-
-                collection(
-                    db,
-                    "listings"
-                ),
-
-                where(
-                    "ownerId",
-                    "==",
-                    state.user.uid
-                )
-
-            );
-
-    } else {
-
-        listingQuery =
-            query(
-
-                collection(
-                    db,
-                    "listings"
-                ),
-
-                where(
-                    "verified",
-                    "==",
-                    true
-                )
-
-            );
-
-    }
-
-
-
-    state.unsubscribeListings =
-        onSnapshot(
-
-            listingQuery,
-
-            snapshot => {
-
-                state.listings =
-                    snapshot.docs
-
-                        .map(
-                            document => ({
-                                id:
-                                    document.id,
-
-                                ...document.data()
-
-                            })
-                        )
-
-                        .sort(
-                            (a,b) =>
-
-                                (
-                                    b.createdAt
-                                    ?.seconds ||
-                                    0
-
-                                )
-
-                                -
-
-                                (
-                                    a.createdAt
-                                    ?.seconds ||
-                                    0
-
-                                )
-                        );
-
-
-                if (
-                    state.page ===
-                    "ownerHome" ||
-
-                    state.page ===
-                    "ownerDetails" ||
-
-                    state.page ===
-                    "studentHome"
-                ) {
-
-                    render();
-
-                }
-
-            },
-
-            error => {
-
-                console.error(
-                    error
-                );
-
-                toast(
-                    "Could not load listings."
-                );
-
-            }
-
-        );
-
-
-
-    const chatQuery =
-        query(
-
-            collection(
-                db,
-                "chats"
-            ),
-
-            where(
-                "participantIds",
-                "array-contains",
-                state.user.uid
-            )
-
-        );
-
-
-    state.unsubscribeChats =
-        onSnapshot(
-
-            chatQuery,
-
-            snapshot => {
-
-                state.chats =
-                    snapshot.docs
-
-                        .map(
-                            document => ({
-                                id:
-                                    document.id,
-
-                                ...document.data()
-
-                            })
-                        )
-
-                        .sort(
-                            (a,b) =>
-
-                                (
-                                    b.createdAt
-                                    ?.seconds ||
-                                    0
-
-                                )
-
-                                -
-
-                                (
-                                    a.createdAt
-                                    ?.seconds ||
-                                    0
-
-                                )
-                        );
-
-
-                if (
-                    state.page ===
-                    "chat"
-                ) {
-
-                    render();
-
-                }
-
-            },
-
-            error => {
-
-                console.error(
-                    error
-                );
-
-                toast(
-                    "Chat could not be loaded."
-                );
-
-            }
-
-        );
-
-}
-
-
-
-/* ==========================================
-   REVIEWS
-========================================== */
-
-
-function loadReviews(
-    listingId
-) {
-
-    const reviewsQuery =
-        query(
-
-            collection(
-                db,
-                "reviews"
-            ),
-
-            where(
-                "listingId",
-                "==",
-                listingId
-            )
-
-        );
-
-
-    if (
-        state.unsubscribeReviews
-    ) {
-
-        state.unsubscribeReviews();
-
-    }
-
-
-    state.unsubscribeReviews =
-        onSnapshot(
-
-            reviewsQuery,
-
-            snapshot => {
-
-                state.reviews[
-                    listingId
-                ] =
-                    snapshot.docs
-
-                        .map(
-                            document => ({
-                                id:
-                                    document.id,
-
-                                ...document.data()
-                            })
-                        )
-
-                        .sort(
-                            (a,b) =>
-
-                                (
-                                    b.createdAt
-                                    ?.seconds ||
-                                    0
-                                )
-
-                                -
-
-                                (
-                                    a.createdAt
-                                    ?.seconds ||
-                                    0
-                                )
-                        );
-
-
-                if (
-                    state.page ===
-                    "studentDetails"
-                ) {
-
-                    render();
-
-                }
-
-            }
-
-        );
 
 }
 
@@ -6060,6 +6285,7 @@ function showModal(
                 "div"
             );
 
+
         root.id =
             "modal-root";
 
@@ -6079,6 +6305,7 @@ function showModal(
 }
 
 
+
 function closeModal() {
 
     document
@@ -6086,6 +6313,327 @@ function closeModal() {
             "modal-root"
         )
         ?.remove();
+
+}
+
+
+
+/* ==========================================
+   DATA
+========================================== */
+
+
+function subscribeToData() {
+
+    if (
+        state.unsubscribeListings
+    ) {
+
+        state.unsubscribeListings();
+
+    }
+
+
+    if (
+        state.unsubscribeChats
+    ) {
+
+        state.unsubscribeChats();
+
+    }
+
+
+    let listingsQuery;
+
+
+    if (
+        state.role ===
+        "owner"
+    ) {
+
+        listingsQuery =
+            query(
+
+                collection(
+                    db,
+                    "listings"
+                ),
+
+                where(
+                    "ownerId",
+                    "==",
+                    state.user.uid
+                )
+
+            );
+
+    } else {
+
+        listingsQuery =
+            query(
+
+                collection(
+                    db,
+                    "listings"
+                ),
+
+                where(
+                    "verified",
+                    "==",
+                    true
+                )
+
+            );
+
+    }
+
+
+    state.unsubscribeListings =
+        onSnapshot(
+
+            listingsQuery,
+
+            snapshot => {
+
+                state.listings =
+                    snapshot.docs
+
+                        .map(
+                            item => ({
+
+                                id:
+                                    item.id,
+
+                                ...item.data()
+
+                            })
+                        )
+
+                        .sort(
+                            (a,b) =>
+
+                                (
+                                    b.createdAt
+                                    ?.seconds ||
+                                    0
+                                )
+
+                                -
+
+                                (
+                                    a.createdAt
+                                    ?.seconds ||
+                                    0
+                                )
+                        );
+
+
+                if (
+
+                    state.page ===
+                    "ownerHome"
+
+                    ||
+
+                    state.page ===
+                    "ownerDetails"
+
+                    ||
+
+                    state.page ===
+                    "studentHome"
+
+                ) {
+
+                    render();
+
+                }
+
+            },
+
+            error => {
+
+                console.error(
+                    error
+                );
+
+                toast(
+                    "Could not load listings."
+                );
+
+            }
+
+        );
+
+
+
+    const chatsQuery =
+        query(
+
+            collection(
+                db,
+                "chats"
+            ),
+
+            where(
+                "participantIds",
+                "array-contains",
+                state.user.uid
+            )
+
+        );
+
+
+    state.unsubscribeChats =
+        onSnapshot(
+
+            chatsQuery,
+
+            snapshot => {
+
+                state.chats =
+                    snapshot.docs
+
+                        .map(
+                            item => ({
+
+                                id:
+                                    item.id,
+
+                                ...item.data()
+
+                            })
+                        )
+
+                        .sort(
+                            (a,b) =>
+
+                                (
+                                    b.createdAt
+                                    ?.seconds ||
+                                    0
+                                )
+
+                                -
+
+                                (
+                                    a.createdAt
+                                    ?.seconds ||
+                                    0
+                                )
+                        );
+
+
+                if (
+                    state.page ===
+                    "chat"
+                ) {
+
+                    render();
+
+                }
+
+            },
+
+            error => {
+
+                console.error(
+                    error
+                );
+
+                toast(
+                    "Could not load chats."
+                );
+
+            }
+
+        );
+
+}
+
+
+
+/* ==========================================
+   REVIEWS
+========================================== */
+
+
+function loadReviews(
+    listingId
+) {
+
+    if (
+        state.unsubscribeReviews
+    ) {
+
+        state.unsubscribeReviews();
+
+    }
+
+
+    const q =
+        query(
+
+            collection(
+                db,
+                "reviews"
+            ),
+
+            where(
+                "listingId",
+                "==",
+                listingId
+            )
+
+        );
+
+
+    state.unsubscribeReviews =
+        onSnapshot(
+
+            q,
+
+            snapshot => {
+
+                state.reviews[
+                    listingId
+                ] =
+                    snapshot.docs.map(
+                        item => ({
+
+                            id:
+                                item.id,
+
+                            ...item.data()
+
+                        })
+                    );
+
+
+                if (
+                    state.page ===
+                    "studentDetails"
+                ) {
+
+                    render();
+
+                }
+
+            },
+
+            error => {
+
+                console.error(
+                    error
+                );
+
+                toast(
+                    "Could not load reviews."
+                );
+
+            }
+
+        );
 
 }
 
@@ -6102,20 +6650,17 @@ function render() {
         !state.user
     ) {
 
-        if (
+        app.innerHTML =
             state.page ===
             "login"
-        ) {
 
-            app.innerHTML =
-                loginPage();
+            ?
 
-        } else {
+            loginPage()
 
-            app.innerHTML =
-                landingPage();
+            :
 
-        }
+            landingPage();
 
 
         return;
@@ -6123,121 +6668,101 @@ function render() {
     }
 
 
-
-    if (
-        state.page ===
-        "ownerHome"
+    switch (
+        state.page
     ) {
 
-        app.innerHTML =
-            ownerHome();
 
-    }
+        case "ownerHome":
 
+            app.innerHTML =
+                ownerHome();
 
-    else if (
-        state.page ===
-        "create"
-    ) {
-
-        app.innerHTML =
-            createListingPage();
-
-    }
+            break;
 
 
-    else if (
-        state.page ===
-        "ownerDetails"
-    ) {
+        case "create":
 
-        app.innerHTML =
-            ownerDetailsPage();
+            app.innerHTML =
+                createListingPage();
 
-    }
+            document
+                .getElementById(
+                    "listing-form"
+                )
+                ?.addEventListener(
+                    "submit",
+                    submitListing
+                );
 
-
-    else if (
-        state.page ===
-        "studentHome"
-    ) {
-
-        app.innerHTML =
-            studentHome();
-
-        setupStudentFilters();
-
-    }
+            break;
 
 
-    else if (
-        state.page ===
-        "studentDetails"
-    ) {
+        case "ownerDetails":
 
-        app.innerHTML =
-            studentDetailsPage();
+            app.innerHTML =
+                ownerDetailsPage();
 
-        if (
-            state.selectedListing
-        ) {
+            break;
 
-            loadReviews(
+
+        case "studentHome":
+
+            app.innerHTML =
+                studentHome();
+
+            setupStudentFilters();
+
+            break;
+
+
+        case "studentDetails":
+
+            app.innerHTML =
+                studentDetailsPage();
+
+            if (
                 state.selectedListing
-            );
+            ) {
 
-        }
+                loadReviews(
+                    state.selectedListing
+                );
 
-    }
+            }
 
-
-    else if (
-        state.page ===
-        "chat"
-    ) {
-
-        app.innerHTML =
-            chatPage();
-
-        const selected =
-            state.chats.find(
-                c =>
-                    c.id ===
-                    state.selectedChat
-            ) ||
-            state.chats[0];
+            break;
 
 
-        if (
-            selected
-        ) {
+        case "chat":
 
-            loadMessages(
-                selected.id
-            );
+            app.innerHTML =
+                chatPage();
 
-        }
-
-    }
+            break;
 
 
-    else if (
-        state.page ===
-        "profile"
-    ) {
+        case "profile":
 
-        app.innerHTML =
-            profilePage();
+            app.innerHTML =
+                profilePage();
 
-    }
+            break;
 
 
-    else {
+        default:
 
-        app.innerHTML =
-            state.role === "owner"
-                ? ownerHome()
-                : studentHome();
+            app.innerHTML =
+                state.role ===
+                "owner"
+
+                ?
+
+                ownerHome()
+
+                :
+
+                studentHome();
 
     }
 
@@ -6246,7 +6771,72 @@ function render() {
 
 
 /* ==========================================
-   PUBLIC FUNCTIONS
+   LOGOUT
+========================================== */
+
+
+async function logout() {
+
+    try {
+
+        clearSubscriptions();
+
+
+        await signOut(
+            auth
+        );
+
+
+        state.user =
+            null;
+
+        state.profile =
+            null;
+
+        state.role =
+            null;
+
+        state.page =
+            "landing";
+
+        state.selectedListing =
+            null;
+
+        state.selectedChat =
+            null;
+
+
+        state.listings =
+            [];
+
+
+        state.chats =
+            [];
+
+
+        state.messages =
+            [];
+
+
+        render();
+
+
+    } catch (
+        error
+    ) {
+
+        console.error(
+            error
+        );
+
+    }
+
+}
+
+
+
+/* ==========================================
+   PUBLIC API
 ========================================== */
 
 
@@ -6260,17 +6850,9 @@ window.rentStuds = {
 
     logout,
 
-    createListing,
-
     openOwner,
 
     openStudent,
-
-    openVerification,
-
-    scheduleVerification,
-
-    demoVerify,
 
     startChat,
 
@@ -6286,6 +6868,12 @@ window.rentStuds = {
 
     submitReview,
 
+    openVerification,
+
+    scheduleVerification,
+
+    demoVerify,
+
     closeModal,
 
     saveProfile
@@ -6295,14 +6883,45 @@ window.rentStuds = {
 
 
 /* ==========================================
-   AUTH OBSERVER
+   AUTH STATE
 ========================================== */
 
 
 onAuthStateChanged(
+
     auth,
 
     async user => {
+
+        if (!user) {
+
+            clearSubscriptions();
+
+            state.profile =
+                null;
+
+            state.role =
+                null;
+
+            state.listings =
+                [];
+
+            state.chats =
+                [];
+
+            state.messages =
+                [];
+
+            state.selectedListing =
+                null;
+
+            state.selectedChat =
+                null;
+
+            state.page =
+                "landing";
+
+        }
 
         state.user =
             user;
@@ -6314,15 +6933,16 @@ onAuthStateChanged(
 
             try {
 
-                await loadUserProfile();
-
+                await loadProfile();
 
                 subscribeToData();
 
 
                 if (
                     state.page ===
-                    "landing" ||
+                    "landing"
+
+                    ||
 
                     state.page ===
                     "login"
@@ -6332,20 +6952,26 @@ onAuthStateChanged(
                         state.role ===
                         "owner"
 
-                            ? "ownerHome"
+                        ?
 
-                            : "studentHome";
+                        "ownerHome"
+
+                        :
+
+                        "studentHome";
 
                 }
 
-            } catch (error) {
+            } catch (
+                error
+            ) {
 
                 console.error(
                     error
                 );
 
                 toast(
-                    "Could not load your profile."
+                    "Could not load your account."
                 );
 
             }
