@@ -2493,3 +2493,131 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
         text-align: center;
     }
 }
+
+/* ==========================================
+   ROLE SWITCHER & ENHANCEMENTS
+========================================== */
+.role-pill {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+.role-pill.role-owner {
+    background: #fff3d8;
+    color: #a96d00;
+    border: 1px solid rgba(169, 109, 0, 0.2);
+}
+.role-pill.role-student {
+    background: #eeecff;
+    color: #5b4bff;
+    border: 1px solid rgba(91, 75, 255, 0.2);
+}
+.btn-role-switch {
+    background: #ffffff;
+    color: var(--primary);
+    border: 1.5px solid var(--primary);
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.btn-role-switch:hover {
+    background: var(--primary);
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(91, 75, 255, 0.25);
+}
+
+/* Demo Mode Options */
+.demo-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 18px 0;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+.demo-divider::before, .demo-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border);
+}
+.demo-divider span {
+    padding: 0 10px;
+}
+.demo-btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.btn-demo {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+.btn-demo-student {
+    background: #eeecff;
+    color: #4435d8;
+    border-color: #c7c1ff;
+}
+.btn-demo-student:hover {
+    background: #e2dfff;
+    transform: translateY(-1px);
+}
+.btn-demo-owner {
+    background: #fff3d8;
+    color: #925800;
+    border-color: #fce19a;
+}
+.btn-demo-owner:hover {
+    background: #fee9b8;
+    transform: translateY(-1px);
+}
+
+/* Protocol Alert */
+.protocol-warning {
+    background: #fff8e6;
+    border: 1px solid #ffd57e;
+    color: #7a5000;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    margin-bottom: 14px;
+    text-align: left;
+}
+.protocol-warning strong {
+    color: #5c3b00;
+}
+
+/* Image Previews in Create Form */
+.preview-thumb {
+    width: 80px;
+    height: 80px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 2px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}

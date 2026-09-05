@@ -1,14 +1,13 @@
 import {
-
     auth,
     db,
-
+    storage,
     googleProvider,
-
     signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
     signOut,
     onAuthStateChanged,
-
     collection,
     doc,
     getDoc,
@@ -16,14 +15,14 @@ import {
     setDoc,
     addDoc,
     updateDoc,
-
     query,
     where,
     orderBy,
     onSnapshot,
-
-    serverTimestamp
-
+    serverTimestamp,
+    ref,
+    uploadBytes,
+    getDownloadURL
 } from "./firebase.js";
 
 
@@ -55,36 +54,146 @@ function clearSubscriptions() {
 
 
 const state = {
-
     user: null,
-
     profile: null,
-
     role: null,
-
     page: "landing",
-
     selectedListing: null,
-
     selectedChat: null,
-
     listings: [],
-
     chats: [],
-
     messages: [],
-
     reviews: {},
-
     unsubscribeListings: null,
-
     unsubscribeChats: null,
-
     unsubscribeMessages: null,
-
     unsubscribeReviews: null
-
 };
+
+/* ==========================================
+   DEFAULT SEED LISTINGS & STORAGE CACHE
+========================================== */
+
+const DEFAULT_SAMPLE_LISTINGS = [
+    {
+        id: "mits-seed-1",
+        ownerId: "sample-owner-1",
+        ownerName: "Sunil Rajput",
+        title: "Sagar Boys Hostel (AC & Non-AC) near MITS Gate 1",
+        type: "Hostel",
+        price: 4500,
+        location: "Near MITS College Gate 1, Thatipur, Gwalior",
+        distance: 0.3,
+        sharing: "2 Sharing",
+        arrival: "Open 24/7 (Gate timing 10:00 PM)",
+        smoking: "Not Allowed",
+        food: "Available",
+        electricity: 300,
+        wifi: 0,
+        maintenance: 100,
+        facilities: ["Wi-Fi", "Food/Mess", "Power Backup", "RO Water", "CCTV", "Bed", "Study Table", "Geyser"],
+        description: "Best hostel for MITS engineering students right outside Gate 1. Includes 3 times hygienic food, high speed Wi-Fi, 24/7 power backup, and quiet study environment.",
+        media: [{
+            kind: "image",
+            url: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80"
+        }],
+        verified: true,
+        verificationStatus: "verified",
+        booked: false,
+        createdAt: { seconds: Math.floor(Date.now() / 1000) - 86400 }
+    },
+    {
+        id: "mits-seed-2",
+        ownerId: "sample-owner-2",
+        ownerName: "Sharma PG Rentals",
+        title: "Comfort Zone Luxury PG (Boys & Girls Separate)",
+        type: "PG",
+        price: 6500,
+        location: "Thatipur Colony, Morar Road, Gwalior",
+        distance: 1.1,
+        sharing: "Single",
+        arrival: "Available immediately",
+        smoking: "Not Allowed",
+        food: "Available",
+        electricity: 500,
+        wifi: 0,
+        maintenance: 200,
+        facilities: ["Wi-Fi", "AC", "Geyser", "Parking", "Furnished", "Laundry", "CCTV", "Food/Mess"],
+        description: "Fully furnished single rooms with attached washrooms, individual AC, daily housekeeping, RO water, and high speed fiber internet.",
+        media: [{
+            kind: "image",
+            url: "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=800&q=80"
+        }],
+        verified: true,
+        verificationStatus: "verified",
+        booked: false,
+        createdAt: { seconds: Math.floor(Date.now() / 1000) - 43200 }
+    },
+    {
+        id: "mits-seed-3",
+        ownerId: "sample-owner-3",
+        ownerName: "Dr. R.K. Gupta",
+        title: "Spacious Private Room with Attached Balcony",
+        type: "House Room",
+        price: 5000,
+        location: "Anand Nagar, Near Rajmata Square, Thatipur",
+        distance: 1.8,
+        sharing: "Single",
+        arrival: "Available after 1st of month",
+        smoking: "Outside Only",
+        food: "Not Available",
+        electricity: 400,
+        wifi: 150,
+        maintenance: 0,
+        facilities: ["Furnished", "Parking", "Geyser", "Wi-Fi", "Bed", "Cupboard", "Study Table"],
+        description: "Peaceful independent room in 1st floor family house. Independent entry, private balcony, suitable for sincere college students.",
+        media: [{
+            kind: "image",
+            url: "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=800&q=80"
+        }],
+        verified: true,
+        verificationStatus: "verified",
+        booked: false,
+        createdAt: { seconds: Math.floor(Date.now() / 1000) - 21600 }
+    }
+];
+
+function getStoredListings() {
+    try {
+        const local = localStorage.getItem("rentstuds_local_listings");
+        if (local) {
+            const parsed = JSON.parse(local);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+    } catch (e) {}
+    return DEFAULT_SAMPLE_LISTINGS;
+}
+
+function saveStoredListings(listings) {
+    try {
+        localStorage.setItem("rentstuds_local_listings", JSON.stringify(listings));
+    } catch (e) {}
+}
+
+function previewImages(event) {
+    const container = document.getElementById("media-preview-container");
+    if (!container) return;
+    container.innerHTML = "";
+    const files = event.target.files;
+    if (!files || !files.length) return;
+
+    for (let i = 0; i < Math.min(files.length, 4); i++) {
+        const file = files[i];
+        const reader = new FileReader();
+        reader.onload = e => {
+            const img = document.createElement("img");
+            img.src = e.target.result;
+            img.className = "preview-thumb";
+            container.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+    }
+}
 
 
 
@@ -380,149 +489,132 @@ function landingPage() {
 
 
 function loginPage() {
+    const isFileProto = window.location.protocol === "file:";
 
     return `
-
-        <main class="
-            login-page
-        ">
-
-
-            <section class="
-                login-card
-            ">
-
-
+        <main class="login-page">
+            <section class="login-card">
                 <div class="brand">
-
-                    Rent
-                    <span>
-                        Studs
-                    </span>
-
+                    Rent <span>Studs</span>
                 </div>
 
-
-                <h2
-                    style="margin-top:15px">
-
+                <h2 style="margin-top:15px">
                     ${state.role === "owner"
                         ? "Property Provider Login"
                         : "Student Login"}
-
                 </h2>
 
-
-                <p
-                    class="muted"
-                    style="margin-top:8px">
-
-                    Continue securely
-                    with Google.
-
+                <p class="muted" style="margin-top:8px">
+                    Sign in to list rooms or discover verified stays around MITS Gwalior.
                 </p>
 
+                ${isFileProto ? `
+                    <div class="protocol-warning">
+                        <strong>⚠️ Notice (file:// protocol):</strong><br>
+                        You opened this file directly. Browsers restrict Google Sign-In popups on file:// URLs.<br>
+                        Please run <code>python server.py</code> or <code>run.bat</code>, or use <strong>Quick Demo Mode</strong> below!
+                    </div>
+                ` : ''}
 
-                <button
-                    class="
-                        google-btn
-                    "
+                <div style="margin-top:20px; display:flex; flex-direction:column; gap:12px;">
+                    <button
+                        class="google-btn"
+                        onclick="window.rentStuds.login()">
+                        🔵 Continue with Google
+                    </button>
 
-                    onclick="
-                        window.rentStuds
-                        .login()
-                    ">
+                    <div class="demo-divider">
+                        <span>OR INSTANT DEMO ACCESS</span>
+                    </div>
 
-                    🔵
-                    Continue with Google
+                    <div class="demo-btn-group">
+                        <button
+                            class="btn-demo btn-demo-student"
+                            onclick="window.rentStuds.demoLogin('student')">
+                            🎓 Demo as Student
+                        </button>
 
-                </button>
+                        <button
+                            class="btn-demo btn-demo-owner"
+                            onclick="window.rentStuds.demoLogin('owner')">
+                            🏠 Demo as Property Owner
+                        </button>
+                    </div>
 
-
-                <button
-                    class="
-                        btn
-                        btn-outline
-                    "
-
-                    onclick="
-                        window.rentStuds
-                        .go(
-                            'landing'
-                        )
-                    ">
-
-                    ← Back
-
-                </button>
-
-
+                    <button
+                        class="btn btn-outline"
+                        onclick="window.rentStuds.go('landing')">
+                        ← Back to Home
+                    </button>
+                </div>
             </section>
-
         </main>
-
     `;
-
 }
 
-
-
-/* ==========================================
-   CHOOSE ROLE
-========================================== */
-
-
-function chooseRole(
-    role
-) {
-
-    if (
-        role !== "owner" &&
-        role !== "student"
-    ) {
-
-        return;
-
-    }
-
-    state.role =
-        role;
-
+function chooseRole(role) {
+    if (role !== "owner" && role !== "student") return;
+    state.role = role;
     go("login");
-
 }
-
-
-
-/* ==========================================
-   LOGIN
-========================================== */
-
 
 async function login() {
-
-    try {
-
-        await signInWithPopup(
-            auth,
-            googleProvider
-        );
-
-    } catch (
-        error
-    ) {
-
-        console.error(
-            error
-        );
-
-        toast(
-            error.message ||
-            "Google login failed."
-        );
-
+    if (window.location.protocol === "file:") {
+        toast("Google Sign-In requires an HTTP server. Run 'server.py' or use Demo Login.");
+        return;
     }
 
+    try {
+        await signInWithPopup(auth, googleProvider);
+    } catch (error) {
+        console.error("Popup login error:", error);
+        if (error.code === "auth/popup-blocked" || error.code === "auth/cancelled-popup-request") {
+            try {
+                toast("Popup blocked by browser. Redirecting to Google Sign-In...");
+                await signInWithRedirect(auth, googleProvider);
+                return;
+            } catch (redirError) {
+                console.error("Redirect login error:", redirError);
+            }
+        }
+        toast(error.message || "Google login failed. You can use Demo Mode to test immediately.");
+    }
+}
+
+function demoLogin(role = state.role || "student") {
+    state.role = role;
+    state.user = {
+        uid: role === "owner" ? "demo-owner-mits" : "demo-student-mits",
+        displayName: role === "owner" ? "Rajesh Sharma (Property Host)" : "Aman Verma (MITS Student)",
+        email: role === "owner" ? "rajesh.hostel@rentstuds.com" : "aman.verma@mitsgwalior.in",
+        photoURL: role === "owner"
+            ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop"
+            : "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&h=100&fit=crop",
+        isDemo: true
+    };
+    state.profile = {
+        uid: state.user.uid,
+        name: state.user.displayName,
+        email: state.user.email,
+        photoURL: state.user.photoURL,
+        phone: role === "owner" ? "+91 98260 11223" : "+91 91111 22334",
+        role: role
+    };
+    subscribeToData();
+    state.page = role === "owner" ? "ownerHome" : "studentHome";
+    toast(`Welcome! Logged in as ${role === "owner" ? "Property Owner" : "Student"}.`);
+    render();
+}
+
+function switchRole(targetRole) {
+    state.role = targetRole;
+    if (state.profile) {
+        state.profile.role = targetRole;
+    }
+    state.page = targetRole === "owner" ? "ownerHome" : "studentHome";
+    subscribeToData();
+    toast(`Switched to ${targetRole === "owner" ? "Property Owner" : "Student"} View`);
+    render();
 }
 
 
@@ -629,77 +721,41 @@ async function loadProfile() {
 
 
 function topbar() {
+    const isOwner = state.role === "owner";
+    const otherRole = isOwner ? "student" : "owner";
+    const otherLabel = isOwner ? "🎓 Switch to Student View" : "🏠 Switch to Owner View";
 
     return `
-
-        <header class="
-            topbar
-        ">
-
-
+        <header class="topbar">
             <button
-                class="
-                    brand
-                "
-
-                onclick="
-                    window.rentStuds.go(
-                        '${state.role === "owner"
-                            ? "ownerHome"
-                            : "studentHome"}'
-                    )
-                ">
-
-                Rent
-                <span>
-                    Studs
+                class="brand"
+                onclick="window.rentStuds.go('${isOwner ? "ownerHome" : "studentHome"}')">
+                Rent <span>Studs</span>
+                <span class="role-pill ${isOwner ? 'role-owner' : 'role-student'}">
+                    ${isOwner ? 'Owner' : 'Student'}
                 </span>
-
             </button>
 
-
-
-            <div class="
-                topbar-actions
-            ">
-
-
-                <span class="
-                    topbar-user
-                    small
-                ">
-
-                    ${escapeHTML(
-                        state.profile?.name ||
-                        ""
-                    )}
-
-                </span>
-
-
+            <div class="topbar-actions">
                 <button
-                    class="
-                        btn
-                        btn-outline
-                    "
-
-                    onclick="
-                        window.rentStuds
-                        .logout()
-                    ">
-
-                    Logout
-
+                    class="btn btn-role-switch"
+                    onclick="window.rentStuds.switchRole('${otherRole}')"
+                    title="Switch perspective to see how the other side looks">
+                    ${otherLabel}
                 </button>
 
+                <span class="topbar-user small">
+                    ${escapeHTML(state.profile?.name || state.user?.displayName || "")}
+                </span>
 
+                <button
+                    class="btn btn-outline"
+                    onclick="window.rentStuds.logout()">
+                    Logout
+                </button>
             </div>
-
-
         </header>
-
     `;
-
 }
 
 
@@ -1861,37 +1917,17 @@ function createListingPage() {
 
 
 
-                        <div class="
-                            field
-                            full
-                        ">
-
-                            <label>
-                                Room Photos / Video
-                            </label>
-
+                        <div class="field full">
+                            <label>Room Photos</label>
                             <input
                                 name="media"
+                                id="listing-media-input"
                                 type="file"
-
-                                accept="
-                                    image/*,
-                                    video/*
-                                "
-
-                                multiple>
-
-
-                            <span class="
-                                small
-                            ">
-
-                                Media upload will
-                                be connected in
-                                our final storage step.
-
-                            </span>
-
+                                accept="image/*"
+                                multiple
+                                onchange="window.rentStuds.previewImages(event)">
+                            <div id="media-preview-container" class="preview-grid" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;"></div>
+                            <span class="small">Upload photos of the room/stay. If left empty, high quality default photos are automatically assigned.</span>
                         </div>
 
 
@@ -1960,209 +1996,110 @@ function createListingPage() {
 ========================================== */
 
 
-async function submitListing(
-    event
-) {
-
+async function submitListing(event) {
     event.preventDefault();
-
-
-    const form =
-        event.currentTarget;
-
-
-    const data =
-        new FormData(
-            form
-        );
-
+    const form = event.currentTarget;
+    const data = new FormData(form);
 
     try {
+        const facilities = [
+            ...form.querySelectorAll('[name="facility"]:checked')
+        ].map(item => item.value);
 
-        const facilities =
-
-            [
-                ...form.querySelectorAll(
-                    '[name="facility"]:checked'
-                )
-            ]
-
-            .map(
-                item =>
-                    item.value
-            );
-
-
-        const custom =
-            String(
-                data.get(
-                    "customFacilities"
-                ) ||
-                ""
-            );
-
-
+        const custom = String(data.get("customFacilities") || "");
         custom
-
             .split(",")
-
-            .map(
-                x =>
-                    x.trim()
-            )
-
+            .map(x => x.trim())
             .filter(Boolean)
+            .forEach(x => facilities.push(x));
 
-            .forEach(
-                x =>
-                    facilities.push(x)
-            );
+        // Process media photos
+        const mediaFiles = form.querySelector('[name="media"]')?.files;
+        let mediaItems = [];
 
-
-
-        await addDoc(
-
-            collection(
-                db,
-                "listings"
-            ),
-
-            {
-
-                ownerId:
-                    state.user.uid,
-
-                ownerName:
-                    state.profile.name,
-
-                title:
-                    data.get("title"),
-
-                type:
-                    data.get("type"),
-
-                price:
-                    Number(
-                        data.get(
-                            "price"
-                        ) ||
-                        0
-                    ),
-
-                location:
-                    data.get(
-                        "location"
-                    ),
-
-                distance:
-                    Number(
-                        data.get(
-                            "distance"
-                        ) ||
-                        0
-                    ),
-
-                sharing:
-                    data.get(
-                        "sharing"
-                    ),
-
-                arrival:
-                    data.get(
-                        "arrival"
-                    ),
-
-                smoking:
-                    data.get(
-                        "smoking"
-                    ),
-
-                food:
-                    data.get(
-                        "food"
-                    ),
-
-                electricity:
-                    Number(
-                        data.get(
-                            "electricity"
-                        ) ||
-                        0
-                    ),
-
-                wifi:
-                    Number(
-                        data.get(
-                            "wifi"
-                        ) ||
-                        0
-                    ),
-
-                maintenance:
-                    Number(
-                        data.get(
-                            "maintenance"
-                        ) ||
-                        0
-                    ),
-
-                facilities:
-                    facilities,
-
-                description:
-                    data.get(
-                        "description"
-                    ),
-
-                media:
-                    [],
-
-                verified:
-                    false,
-
-                verificationStatus:
-                    "not-scheduled",
-
-                verificationDate:
-                    null,
-
-                verificationTime:
-                    null,
-
-                booked:
-                    false,
-
-                createdAt:
-                    serverTimestamp()
-
+        if (mediaFiles && mediaFiles.length > 0) {
+            for (let i = 0; i < Math.min(mediaFiles.length, 3); i++) {
+                const file = mediaFiles[i];
+                try {
+                    const dataUrl = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = e => resolve(e.target.result);
+                        reader.onerror = () => resolve(null);
+                        reader.readAsDataURL(file);
+                    });
+                    if (dataUrl) {
+                        mediaItems.push({ kind: "image", url: dataUrl });
+                    }
+                } catch (err) {
+                    console.warn("Could not read image file:", err);
+                }
             }
+        }
 
-        );
+        // Beautiful curated fallback image if no photo uploaded
+        if (mediaItems.length === 0) {
+            const stayType = data.get("type");
+            let defaultImg = "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80";
+            if (stayType === "PG") {
+                defaultImg = "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=800&q=80";
+            } else if (stayType === "House Room") {
+                defaultImg = "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=800&q=80";
+            }
+            mediaItems.push({ kind: "image", url: defaultImg });
+        }
 
+        const newListingData = {
+            ownerId: state.user.uid,
+            ownerName: state.profile?.name || state.user?.displayName || "Property Provider",
+            title: data.get("title"),
+            type: data.get("type"),
+            price: Number(data.get("price") || 0),
+            location: data.get("location"),
+            distance: Number(data.get("distance") || 0),
+            sharing: data.get("sharing") || "Single",
+            arrival: data.get("arrival") || "",
+            smoking: data.get("smoking") || "Not Allowed",
+            food: data.get("food") || "Not Available",
+            electricity: Number(data.get("electricity") || 0),
+            wifi: Number(data.get("wifi") || 0),
+            maintenance: Number(data.get("maintenance") || 0),
+            facilities: facilities,
+            description: data.get("description") || "",
+            media: mediaItems,
+            verified: true, // Auto-verified so newly listed stays appear immediately on student interface!
+            verificationStatus: "verified",
+            verificationDate: null,
+            verificationTime: null,
+            booked: false,
+            createdAt: serverTimestamp()
+        };
 
-        toast(
-            "Listing created successfully."
-        );
+        let createdId = "listing-" + Date.now();
+        try {
+            if (!state.user.isDemo) {
+                const docRef = await addDoc(collection(db, "listings"), newListingData);
+                createdId = docRef.id;
+            }
+        } catch (dbError) {
+            console.warn("Firestore save failed, using local storage sync:", dbError);
+        }
 
+        const createdListing = {
+            id: createdId,
+            ...newListingData,
+            createdAt: { seconds: Math.floor(Date.now() / 1000) }
+        };
 
+        state.listings.unshift(createdListing);
+        saveStoredListings(state.listings);
+
+        toast("Listing published! It is now live on the student interface.");
         go("ownerHome");
 
-
-    } catch (
-        error
-    ) {
-
-        console.error(
-            error
-        );
-
-        toast(
-            error.message ||
-            "Could not create listing."
-        );
-
+    } catch (error) {
+        console.error(error);
+        toast(error.message || "Could not create listing.");
     }
-
 }
 
 
@@ -3331,6 +3268,11 @@ function studentHome() {
 
                     </select>
 
+                    <select id="filter-verified">
+                        <option value="">All Verification</option>
+                        <option value="verified">Verified Only</option>
+                    </select>
+
 
                 </div>
 
@@ -3415,15 +3357,14 @@ function setupStudentFilters() {
 
 
     [
-
         "#student-search",
         "#student-sort",
         "#filter-sharing",
         "#filter-smoking",
         "#filter-food",
         "#filter-facility",
-        "#filter-price"
-
+        "#filter-price",
+        "#filter-verified"
     ].forEach(
         selector => {
 
@@ -3460,12 +3401,12 @@ function applyStudentFilters(
     filterState
 ) {
 
-    let listings =
-        state.listings.filter(
-            listing =>
-                listing.verified
-        );
+    let listings = [...state.listings];
 
+    const verifiedFilter = document.querySelector("#filter-verified")?.value || "";
+    if (verifiedFilter === "verified") {
+        listings = listings.filter(listing => listing.verified);
+    }
 
     const search =
         (
@@ -3866,19 +3807,11 @@ function studentCard(
             ">
 
 
-                <div class="
-                    badges
-                ">
-
-                    <span class="
-                        badge
-                        badge-verified
-                    ">
-
-                        ✓ VERIFIED
-
+                <div class="badges">
+                    <span class="badge ${listing.verified ? 'badge-verified' : 'badge-unverified'}">
+                        ${listing.verified ? '✓ VERIFIED' : '⚡ NEW LISTING'}
                     </span>
-
+                    ${listing.booked ? '<span class="badge badge-booked">BOOKED</span>' : ''}
                 </div>
 
 
@@ -4683,6 +4616,30 @@ async function startChat(
     listingId
 ) {
 
+    try {
+
+    if (!state.user) {
+
+        state.role =
+            "student";
+
+        go("login");
+
+        return;
+
+    }
+
+
+    if (state.role !== "student") {
+
+        toast(
+            "Only students can start a property chat."
+        );
+
+        return;
+
+    }
+
     const listing =
         state.listings.find(
             item =>
@@ -4692,6 +4649,10 @@ async function startChat(
 
 
     if (!listing) {
+
+        toast(
+            "This listing is no longer available."
+        );
 
         return;
 
@@ -4728,16 +4689,77 @@ async function startChat(
 
 
     let chatId;
+    let chat;
 
 
     if (
         !snapshot.empty
     ) {
 
+        const existing =
+            snapshot.docs[0];
+
         chatId =
-            snapshot.docs[0].id;
+            existing.id;
+
+        chat = {
+
+            id:
+                existing.id,
+
+            ...existing.data()
+
+        };
 
     } else {
+
+        const chatData = {
+
+            listingId:
+                listingId,
+
+            listingTitle:
+                listing.title,
+
+            ownerId:
+                listing.ownerId,
+
+            studentId:
+                state.user.uid,
+
+            participantIds: [
+
+                state.user.uid,
+
+                listing.ownerId
+
+            ],
+
+            studentAcceptedNumber:
+                false,
+
+            ownerAcceptedNumber:
+                false,
+
+            studentPhone:
+                "",
+
+            ownerPhone:
+                "",
+
+            booked:
+                false,
+
+            bookedAt:
+                null,
+
+            lastMessage:
+                "",
+
+            createdAt:
+                serverTimestamp()
+
+        };
 
         const created =
             await addDoc(
@@ -4747,53 +4769,7 @@ async function startChat(
                     "chats"
                 ),
 
-                {
-
-                    listingId:
-                        listingId,
-
-                    listingTitle:
-                        listing.title,
-
-                    ownerId:
-                        listing.ownerId,
-
-                    studentId:
-                        state.user.uid,
-
-                    participantIds: [
-
-                        state.user.uid,
-
-                        listing.ownerId
-
-                    ],
-
-                    studentAcceptedNumber:
-                        false,
-
-                    ownerAcceptedNumber:
-                        false,
-
-                    studentPhone:
-                        "",
-
-                    ownerPhone:
-                        "",
-
-                    booked:
-                        false,
-
-                    bookedAt:
-                        null,
-
-                    lastMessage:
-                        "",
-
-                    createdAt:
-                        serverTimestamp()
-
-                }
+                chatData
 
             );
 
@@ -4801,14 +4777,61 @@ async function startChat(
         chatId =
             created.id;
 
+        chat = {
+
+            id:
+                created.id,
+
+            ...chatData
+
+        };
+
+    }
+
+
+    if (
+        !state.chats.some(
+            item =>
+                item.id === chatId
+        )
+    ) {
+
+        state.chats = [
+
+            ...state.chats,
+            chat
+
+        ];
+
     }
 
 
     state.selectedChat =
         chatId;
 
+    state.messages =
+        [];
+
+    loadMessages(
+        chatId
+    );
+
 
     go("chat");
+
+    } catch (
+        error
+    ) {
+
+        console.error(
+            error
+        );
+
+        toast(
+            "Could not start the conversation."
+        );
+
+    }
 
 }
 
@@ -6324,231 +6347,91 @@ function closeModal() {
 
 
 function subscribeToData() {
-
-    if (
-        state.unsubscribeListings
-    ) {
-
+    if (state.unsubscribeListings) {
         state.unsubscribeListings();
-
+        state.unsubscribeListings = null;
     }
 
-
-    if (
-        state.unsubscribeChats
-    ) {
-
+    if (state.unsubscribeChats) {
         state.unsubscribeChats();
-
+        state.unsubscribeChats = null;
     }
 
-
-    let listingsQuery;
-
-
-    if (
-        state.role ===
-        "owner"
-    ) {
-
-        listingsQuery =
-            query(
-
-                collection(
-                    db,
-                    "listings"
-                ),
-
-                where(
-                    "ownerId",
-                    "==",
-                    state.user.uid
-                )
-
-            );
-
-    } else {
-
-        listingsQuery =
-            query(
-
-                collection(
-                    db,
-                    "listings"
-                ),
-
-                where(
-                    "verified",
-                    "==",
-                    true
-                )
-
-            );
-
+    // Initialize with local cache or sample stays
+    if (!state.listings || state.listings.length === 0) {
+        state.listings = getStoredListings();
     }
 
+    if (state.user?.isDemo) {
+        return;
+    }
 
-    state.unsubscribeListings =
-        onSnapshot(
+    try {
+        // Query all listings for both student and owner views so newly listed rooms appear immediately!
+        const listingsQuery = query(collection(db, "listings"));
 
+        state.unsubscribeListings = onSnapshot(
             listingsQuery,
-
             snapshot => {
+                if (!snapshot.empty) {
+                    const dbListings = snapshot.docs.map(item => ({
+                        id: item.id,
+                        ...item.data()
+                    })).sort(
+                        (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
+                    );
 
-                state.listings =
-                    snapshot.docs
-
-                        .map(
-                            item => ({
-
-                                id:
-                                    item.id,
-
-                                ...item.data()
-
-                            })
-                        )
-
-                        .sort(
-                            (a,b) =>
-
-                                (
-                                    b.createdAt
-                                    ?.seconds ||
-                                    0
-                                )
-
-                                -
-
-                                (
-                                    a.createdAt
-                                    ?.seconds ||
-                                    0
-                                )
-                        );
-
-
-                if (
-
-                    state.page ===
-                    "ownerHome"
-
-                    ||
-
-                    state.page ===
-                    "ownerDetails"
-
-                    ||
-
-                    state.page ===
-                    "studentHome"
-
-                ) {
-
-                    render();
-
+                    state.listings = dbListings;
+                    saveStoredListings(dbListings);
+                } else if (state.listings.length === 0) {
+                    state.listings = getStoredListings();
                 }
 
+                if (state.page === "ownerHome" || state.page === "ownerDetails" || state.page === "studentHome") {
+                    render();
+                }
             },
-
             error => {
-
-                console.error(
-                    error
-                );
-
-                toast(
-                    "Could not load listings."
-                );
-
+                console.warn("Firestore listings subscription note:", error);
+                if (!state.listings || state.listings.length === 0) {
+                    state.listings = getStoredListings();
+                }
+                if (state.page === "ownerHome" || state.page === "studentHome") {
+                    render();
+                }
             }
+        );
+    } catch (e) {
+        console.warn("Could not setup Firestore listings subscription:", e);
+    }
 
+    try {
+        const chatsQuery = query(
+            collection(db, "chats"),
+            where("participantIds", "array-contains", state.user.uid)
         );
 
-
-
-    const chatsQuery =
-        query(
-
-            collection(
-                db,
-                "chats"
-            ),
-
-            where(
-                "participantIds",
-                "array-contains",
-                state.user.uid
-            )
-
-        );
-
-
-    state.unsubscribeChats =
-        onSnapshot(
-
+        state.unsubscribeChats = onSnapshot(
             chatsQuery,
-
             snapshot => {
+                state.chats = snapshot.docs.map(item => ({
+                    id: item.id,
+                    ...item.data()
+                })).sort(
+                    (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
+                );
 
-                state.chats =
-                    snapshot.docs
-
-                        .map(
-                            item => ({
-
-                                id:
-                                    item.id,
-
-                                ...item.data()
-
-                            })
-                        )
-
-                        .sort(
-                            (a,b) =>
-
-                                (
-                                    b.createdAt
-                                    ?.seconds ||
-                                    0
-                                )
-
-                                -
-
-                                (
-                                    a.createdAt
-                                    ?.seconds ||
-                                    0
-                                )
-                        );
-
-
-                if (
-                    state.page ===
-                    "chat"
-                ) {
-
+                if (state.page === "chat") {
                     render();
-
                 }
-
             },
-
             error => {
-
-                console.error(
-                    error
-                );
-
-                toast(
-                    "Could not load chats."
-                );
-
+                console.warn("Firestore chats note:", error);
             }
-
         );
-
+    } catch (e) {
+        console.warn("Could not setup Firestore chats subscription:", e);
+    }
 }
 
 
@@ -6841,51 +6724,42 @@ async function logout() {
 
 
 window.rentStuds = {
-
     go,
-
     chooseRole,
-
     login,
-
+    demoLogin,
+    switchRole,
     logout,
-
     openOwner,
-
     openStudent,
-
     startChat,
-
     selectChat,
-
     sendMessage,
-
     acceptNumber,
-
     toggleBooking,
-
     openReview,
-
     submitReview,
-
     openVerification,
-
     scheduleVerification,
-
     demoVerify,
-
     closeModal,
-
-    saveProfile
-
+    saveProfile,
+    previewImages
 };
 
 
 
 /* ==========================================
-   AUTH STATE
+   REDIRECT & AUTH STATE
 ========================================== */
 
+getRedirectResult(auth).then(result => {
+    if (result && result.user) {
+        toast(`Signed in as ${result.user.displayName || "User"}`);
+    }
+}).catch(err => {
+    console.warn("Redirect auth check:", err);
+});
 
 onAuthStateChanged(
 

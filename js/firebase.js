@@ -7,6 +7,8 @@ import {
     getAuth,
     GoogleAuthProvider,
     signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
     signOut,
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
@@ -17,7 +19,6 @@ import {
     collection,
     doc,
     getDoc,
-    getDocs,
     getDocs,
     setDoc,
     addDoc,
@@ -104,6 +105,10 @@ export {
 
     signInWithPopup,
 
+    signInWithRedirect,
+
+    getRedirectResult,
+
     signOut,
 
     onAuthStateChanged,
@@ -113,6 +118,8 @@ export {
     doc,
 
     getDoc,
+
+    getDocs,
 
     setDoc,
 

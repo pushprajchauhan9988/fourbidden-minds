@@ -24,9 +24,8 @@ service cloud.firestore {
         }
 
         match /listings/{listingId} {
-            allow read: if signedIn()
-                && (resource.data.verified == true
-                    || resource.data.ownerId == request.auth.uid);
+            // Allow all signed-in users (and prospective students) to view all available listings
+            allow read: if true;
 
             allow create: if signedIn()
                 && request.resource.data.ownerId == request.auth.uid;
