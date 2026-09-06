@@ -97,9 +97,7 @@ const DEFAULT_SAMPLE_LISTINGS = [
             kind: "image",
             url: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80"
         }],
-        verified: true,
-        verificationStatus: "verified",
-        booked: false,
+                booked: false,
         createdAt: { seconds: Math.floor(Date.now() / 1000) - 86400 }
     },
     {
@@ -124,9 +122,7 @@ const DEFAULT_SAMPLE_LISTINGS = [
             kind: "image",
             url: "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=800&q=80"
         }],
-        verified: true,
-        verificationStatus: "verified",
-        booked: false,
+                booked: false,
         createdAt: { seconds: Math.floor(Date.now() / 1000) - 43200 }
     },
     {
@@ -151,9 +147,7 @@ const DEFAULT_SAMPLE_LISTINGS = [
             kind: "image",
             url: "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=800&q=80"
         }],
-        verified: true,
-        verificationStatus: "verified",
-        booked: false,
+                booked: false,
         createdAt: { seconds: Math.floor(Date.now() / 1000) - 21600 }
     }
 ];
@@ -174,6 +168,75 @@ function saveStoredListings(listings) {
         localStorage.setItem("rentstuds_local_listings", JSON.stringify(listings));
     } catch (e) {}
 }
+
+function getStoredChats() {
+    try {
+        const local = localStorage.getItem("rentstuds_local_chats");
+        if (local) {
+            const parsed = JSON.parse(local);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+    } catch (e) {}
+    return [
+        {
+            id: "chat_mits-seed-1_demo",
+            listingId: "mits-seed-1",
+            listingTitle: "Sagar Boys Hostel near MITS Gate 1",
+            ownerId: "sample-owner-1",
+            ownerName: "Sunil Rajput",
+            studentId: "demo-student-mits",
+            studentName: "Aman Verma",
+            participantIds: ["demo-student-mits", "sample-owner-1"],
+            studentAcceptedNumber: true,
+            ownerAcceptedNumber: true,
+            studentPhone: "+91 91111 22334",
+            ownerPhone: "+91 98260 54321",
+            booked: false,
+            bookedAt: null,
+            lastMessage: "Hi, is this room still available?",
+            createdAt: { seconds: Math.floor(Date.now() / 1000) - 3600 }
+        }
+    ];
+}
+
+function saveStoredChats(chats) {
+    try {
+        localStorage.setItem("rentstuds_local_chats", JSON.stringify(chats));
+    } catch (e) {}
+}
+
+function getStoredMessages(chatId) {
+    try {
+        const local = localStorage.getItem("rentstuds_local_msgs_" + chatId);
+        if (local) {
+            const parsed = JSON.parse(local);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+    } catch (e) {}
+    return [
+        {
+            id: "msg-welcome-" + chatId,
+            senderId: "system",
+            senderName: "Rent Studs",
+            text: "Welcome to Rent Studs chat! Ask about rent, amenities, or visiting times.",
+            createdAt: { seconds: Math.floor(Date.now() / 1000) - 3600 }
+        },
+        {
+            id: "msg-seed-1-" + chatId,
+            senderId: "sample-owner-1",
+            senderName: "Sunil Rajput (Hostel)",
+            text: "Hello! Welcome to Sagar Boys Hostel. Let me know when you would like to visit.",
+            createdAt: { seconds: Math.floor(Date.now() / 1000) - 1800 }
+        }
+    ];
+}
+
+function saveStoredMessages(chatId, messages) {
+    try {
+        localStorage.setItem("rentstuds_local_msgs_" + chatId, JSON.stringify(messages));
+    } catch (e) {}
+}
+
 
 function previewImages(event) {
     const container = document.getElementById("media-preview-container");
@@ -392,8 +455,8 @@ function landingPage() {
                             List your hostel,
                             PG or house room,
                             connect with students
-                            and get your property
-                            verified by Rent Studs.
+                            and connect directly
+                            with students.
 
                         </p>
 
@@ -440,7 +503,7 @@ function landingPage() {
 
                         <p>
 
-                            Find verified stays
+                            Find the best stays
                             around MITS based on
                             rent, distance,
                             sharing and facilities.
@@ -987,153 +1050,46 @@ function bottomNav(
 
 
 function ownerHome() {
+    const mine = state.listings.filter(
+        listing => listing.ownerId === state.user.uid
+    );
 
-    const mine =
-        state.listings.filter(
-            listing =>
-                listing.ownerId ===
-                state.user.uid
-        );
-
-
-    const verified =
-        mine.filter(
-            listing =>
-                listing.verified
-        ).length;
-
-
-    const pending =
-        mine.filter(
-            listing =>
-                listing.verificationStatus ===
-                "scheduled"
-        ).length;
-
-
+    const available = mine.filter(listing => !listing.booked).length;
+    const booked = mine.filter(listing => listing.booked).length;
 
     return `
-
         <div>
-
-
             ${topbar()}
 
-
-            <main class="
-                container
-                page
-            ">
-
-
+            <main class="container page">
                 <div class="heading">
-
-
                     <div>
-
-                        <h1>
-                            My Listings
-                        </h1>
-
-                        <p>
-
-                            Manage your stays
-                            and verification.
-
-                        </p>
-
+                        <h1>My Listings</h1>
+                        <p>Manage your properties and room availability.</p>
                     </div>
-
 
                     <button
-                        class="
-                            btn
-                            btn-primary
-                        "
-
-                        onclick="
-                            window.rentStuds
-                            .go(
-                                'create'
-                            )
-                        ">
-
+                        class="btn btn-primary"
+                        onclick="window.rentStuds.go('create')">
                         + Add Listing
-
                     </button>
-
-
                 </div>
 
-
-
-                <div class="
-                    kpi-row
-                ">
-
-
-                    <div class="
-                        card
-                        kpi
-                    ">
-
-                        <div class="small">
-                            Total Listings
-                        </div>
-
-                        <div class="
-                            kpi-number
-                        ">
-
-                            ${mine.length}
-
-                        </div>
-
+                <div class="kpi-row">
+                    <div class="card kpi">
+                        <div class="small">Total Listings</div>
+                        <div class="kpi-number">${mine.length}</div>
                     </div>
 
-
-
-                    <div class="
-                        card
-                        kpi
-                    ">
-
-                        <div class="small">
-                            Verified
-                        </div>
-
-                        <div class="
-                            kpi-number
-                        ">
-
-                            ${verified}
-
-                        </div>
-
+                    <div class="card kpi">
+                        <div class="small">Available</div>
+                        <div class="kpi-number">${available}</div>
                     </div>
 
-
-
-                    <div class="
-                        card
-                        kpi
-                    ">
-
-                        <div class="small">
-                            Pending
-                        </div>
-
-                        <div class="
-                            kpi-number
-                        ">
-
-                            ${pending}
-
-                        </div>
-
+                    <div class="card kpi">
+                        <div class="small">Booked</div>
+                        <div class="kpi-number">${booked}</div>
                     </div>
-
-
                 </div>
 
 
@@ -1310,48 +1266,11 @@ function ownerCard(
 
 
                 <div class="badges">
-
-
-                    <span class="
-                        badge
-                        ${
-                            listing.verified
-                            ? "badge-verified"
-                            : "badge-unverified"
-                        }
-                    ">
-
-                        ${
-                            listing.verified
-                            ? "✓ VERIFIED"
-                            : "⚠ UNVERIFIED"
-                        }
-
-                    </span>
-
-
                     ${
                         listing.booked
-
-                        ?
-
-                        `<span
-                            class="
-                                badge
-                                badge-booked
-                            ">
-
-                            BOOKED
-
-                        </span>`
-
-                        :
-
-                        ""
-
+                        ? `<span class="badge badge-booked">BOOKED</span>`
+                        : `<span class="badge badge-neutral">AVAILABLE</span>`
                     }
-
-
                 </div>
 
 
@@ -2066,10 +1985,6 @@ async function submitListing(event) {
             facilities: facilities,
             description: data.get("description") || "",
             media: mediaItems,
-            verified: true, // Auto-verified so newly listed stays appear immediately on student interface!
-            verificationStatus: "verified",
-            verificationDate: null,
-            verificationTime: null,
             booked: false,
             createdAt: serverTimestamp()
         };
@@ -2523,144 +2438,7 @@ function ownerDetailsPage() {
 
 
 
-                        <div class="
-                            card
-                            detail-card
-                        ">
 
-
-                            <h2>
-                                Verification
-                            </h2>
-
-
-                            <p>
-
-                                ${
-                                    listing.verified
-
-                                    ?
-
-                                    "This property is verified."
-
-                                    :
-
-                                    listing.verificationStatus ===
-                                    "scheduled"
-
-                                    ?
-
-                                    "Verification call is scheduled."
-
-                                    :
-
-                                    "This property has not been verified."
-
-                                }
-
-                            </p>
-
-
-                            <br>
-
-
-                            ${
-                                listing.verified
-
-                                ?
-
-                                `
-
-                                <span class="
-                                    badge
-                                    badge-verified
-                                ">
-
-                                    ✓ Students can see this
-
-                                </span>
-
-                                `
-
-                                :
-
-                                listing.verificationStatus ===
-                                "scheduled"
-
-                                ?
-
-                                `
-
-                                <div class="
-                                    notice
-                                ">
-
-                                    Scheduled:
-
-                                    ${escapeHTML(
-                                        listing.verificationDate ||
-                                        ""
-                                    )}
-
-                                    at
-
-                                    ${escapeHTML(
-                                        listing.verificationTime ||
-                                        ""
-                                    )}
-
-                                </div>
-
-
-                                <button
-                                    class="
-                                        btn
-                                        btn-success
-                                        btn-block
-                                        mt
-                                    "
-
-                                    onclick="
-                                        window.rentStuds
-                                        .demoVerify(
-                                            '${listing.id}'
-                                        )
-                                    ">
-
-                                    Demo: Mark Verified
-
-                                </button>
-
-                                `
-
-                                :
-
-                                `
-
-                                <button
-                                    class="
-                                        btn
-                                        btn-primary
-                                        btn-block
-                                    "
-
-                                    onclick="
-                                        window.rentStuds
-                                        .openVerification(
-                                            '${listing.id}'
-                                        )
-                                    ">
-
-                                    Schedule ₹100 Verification
-
-                                </button>
-
-                                `
-
-                            }
-
-
-                        </div>
 
 
                     </aside>
@@ -2682,307 +2460,7 @@ function ownerDetailsPage() {
 
 
 
-/* ==========================================
-   VERIFICATION
-========================================== */
 
-
-function openVerification(
-    id
-) {
-
-    showModal(`
-
-        <div class="
-            modal-card
-        ">
-
-
-            <div class="
-                modal-header
-            ">
-
-
-                <h2>
-                    Schedule Verification
-                </h2>
-
-
-                <button
-                    class="
-                        close
-                    "
-
-                    onclick="
-                        window.rentStuds
-                        .closeModal()
-                    ">
-
-                    ×
-
-                </button>
-
-
-            </div>
-
-
-            <p class="muted">
-
-                Rent Studs provides
-                live video verification
-                for <strong>₹100</strong>.
-
-                No payment is collected
-                in this prototype.
-
-            </p>
-
-
-            <br>
-
-
-            <div class="
-                notice
-            ">
-
-                Select a convenient date
-                and time for the
-                verification call.
-
-            </div>
-
-
-            <br>
-
-
-            <div class="
-                form-grid
-            ">
-
-
-                <div class="
-                    field
-                ">
-
-                    <label>
-                        Date
-                    </label>
-
-                    <input
-                        id="verify-date"
-                        type="date">
-
-                </div>
-
-
-                <div class="
-                    field
-                ">
-
-                    <label>
-                        Time
-                    </label>
-
-                    <input
-                        id="verify-time"
-                        type="time">
-
-                </div>
-
-
-            </div>
-
-
-            <div class="
-                form-actions
-            ">
-
-
-                <button
-                    class="
-                        btn
-                        btn-outline
-                    "
-
-                    onclick="
-                        window.rentStuds
-                        .closeModal()
-                    ">
-
-                    Cancel
-
-                </button>
-
-
-                <button
-                    class="
-                        btn
-                        btn-primary
-                    "
-
-                    onclick="
-                        window.rentStuds
-                        .scheduleVerification(
-                            '${id}'
-                        )
-                    ">
-
-                    Schedule Call
-
-                </button>
-
-
-            </div>
-
-
-        </div>
-
-    `);
-
-}
-
-
-
-async function scheduleVerification(
-    id
-) {
-
-    const date =
-        document.getElementById(
-            "verify-date"
-        ).value;
-
-
-    const time =
-        document.getElementById(
-            "verify-time"
-        ).value;
-
-
-    if (
-        !date ||
-        !time
-    ) {
-
-        toast(
-            "Select a date and time."
-        );
-
-        return;
-
-    }
-
-
-    try {
-
-        await updateDoc(
-
-            doc(
-                db,
-                "listings",
-                id
-            ),
-
-            {
-
-                verificationStatus:
-                    "scheduled",
-
-                verificationDate:
-                    date,
-
-                verificationTime:
-                    time
-
-            }
-
-        );
-
-
-        closeModal();
-
-
-        toast(
-            "Verification call scheduled."
-        );
-
-
-    } catch (
-        error
-    ) {
-
-        console.error(
-            error
-        );
-
-        toast(
-            error.message
-        );
-
-    }
-
-}
-
-
-
-async function demoVerify(
-    id
-) {
-
-    if (
-        !confirm(
-            "Mark this listing as VERIFIED?"
-        )
-    ) {
-
-        return;
-
-    }
-
-
-    try {
-
-        await updateDoc(
-
-            doc(
-                db,
-                "listings",
-                id
-            ),
-
-            {
-
-                verified:
-                    true,
-
-                verificationStatus:
-                    "verified"
-
-            }
-
-        );
-
-
-        toast(
-            "Listing verified."
-        );
-
-
-    } catch (
-        error
-    ) {
-
-        console.error(
-            error
-        );
-
-        toast(
-            error.message
-        );
-
-    }
-
-}
 
 
 
@@ -3020,8 +2498,7 @@ function studentHome() {
 
                         <p>
 
-                            Verified accommodation
-                            around MITS.
+                            Accommodations around MITS.
 
                         </p>
 
@@ -3268,10 +2745,7 @@ function studentHome() {
 
                     </select>
 
-                    <select id="filter-verified">
-                        <option value="">All Verification</option>
-                        <option value="verified">Verified Only</option>
-                    </select>
+
 
 
                 </div>
@@ -3364,7 +2838,6 @@ function setupStudentFilters() {
         "#filter-food",
         "#filter-facility",
         "#filter-price",
-        "#filter-verified"
     ].forEach(
         selector => {
 
@@ -3403,10 +2876,7 @@ function applyStudentFilters(
 
     let listings = [...state.listings];
 
-    const verifiedFilter = document.querySelector("#filter-verified")?.value || "";
-    if (verifiedFilter === "verified") {
-        listings = listings.filter(listing => listing.verified);
-    }
+
 
     const search =
         (
@@ -3667,7 +3137,7 @@ function applyStudentFilters(
 
                 <h2>
 
-                    No Verified Stays Match
+                    No Stays Match Your Filters
 
                 </h2>
 
@@ -3808,10 +3278,11 @@ function studentCard(
 
 
                 <div class="badges">
-                    <span class="badge ${listing.verified ? 'badge-verified' : 'badge-unverified'}">
-                        ${listing.verified ? '✓ VERIFIED' : '⚡ NEW LISTING'}
-                    </span>
-                    ${listing.booked ? '<span class="badge badge-booked">BOOKED</span>' : ''}
+                    ${
+                        listing.booked
+                        ? `<span class="badge badge-booked">BOOKED</span>`
+                        : `<span class="badge badge-neutral">AVAILABLE</span>`
+                    }
                 </div>
 
 
@@ -4196,33 +3667,15 @@ function studentDetailsPage() {
                         ">
 
 
-                            <div class="
-                                badges
-                            ">
-
-
-                                <span class="
-                                    badge
-                                    badge-verified
-                                ">
-
-                                    ✓ VERIFIED PROPERTY
-
+                            <div class="badges">
+                                <span class="badge badge-neutral">
+                                    ${escapeHTML(listing.type)}
                                 </span>
-
-
-                                <span class="
-                                    badge
-                                    badge-neutral
-                                ">
-
-                                    ${escapeHTML(
-                                        listing.type
-                                    )}
-
-                                </span>
-
-
+                                ${
+                                    listing.booked
+                                    ? `<span class="badge badge-booked">BOOKED</span>`
+                                    : `<span class="badge badge-neutral">AVAILABLE</span>`
+                                }
                             </div>
 
 
@@ -4608,1218 +4061,423 @@ function studentDetailsPage() {
 
 
 /* ==========================================
-   CHAT
+   CHAT SYSTEM
 ========================================== */
 
-
-async function startChat(
-    listingId
-) {
-
+async function startChat(listingId) {
     try {
+        if (!state.user) {
+            state.role = "student";
+            toast("Please sign in or use Demo mode to chat.");
+            go("login");
+            return;
+        }
 
-    if (!state.user) {
+        const listing = state.listings.find(item => item.id === listingId);
+        if (!listing) {
+            toast("Listing details could not be found.");
+            return;
+        }
 
-        state.role =
-            "student";
+        // Deterministic chatId for this listing and student
+        const chatId = "chat_" + listing.id + "_" + state.user.uid;
+        let chat = state.chats.find(c => c.id === chatId || (c.listingId === listing.id && c.studentId === state.user.uid));
 
-        go("login");
+        if (!chat) {
+            chat = {
+                id: chatId,
+                listingId: listing.id,
+                listingTitle: listing.title,
+                ownerId: listing.ownerId,
+                ownerName: listing.ownerName || "Property Provider",
+                studentId: state.user.uid,
+                studentName: state.profile?.name || state.user?.displayName || "Student",
+                participantIds: [state.user.uid, listing.ownerId],
+                studentAcceptedNumber: false,
+                ownerAcceptedNumber: false,
+                studentPhone: state.profile?.phone || "",
+                ownerPhone: "+91 98260 12345",
+                booked: false,
+                bookedAt: null,
+                lastMessage: "Conversation started",
+                createdAt: { seconds: Math.floor(Date.now() / 1000) }
+            };
 
-        return;
+            state.chats.unshift(chat);
+            saveStoredChats(state.chats);
 
+            const initialMsgs = [
+                {
+                    id: "msg-init-" + Date.now(),
+                    senderId: "system",
+                    senderName: "Rent Studs",
+                    text: `Started conversation for "${listing.title}". Type a message below to inquire about rent, amenities, or visits!`,
+                    createdAt: { seconds: Math.floor(Date.now() / 1000) }
+                }
+            ];
+            saveStoredMessages(chatId, initialMsgs);
+
+            if (!state.user?.isDemo) {
+                try {
+                    await setDoc(doc(db, "chats", chatId), {
+                        ...chat,
+                        createdAt: serverTimestamp()
+                    });
+                } catch (e) {
+                    console.warn("Firestore setDoc for chat note:", e);
+                }
+            }
+        }
+
+        state.selectedChat = chat.id;
+        state.messages = getStoredMessages(chat.id);
+        go("chat");
+
+    } catch (err) {
+        console.error("startChat error:", err);
+        toast("Could not open chat.");
     }
-
-
-    if (state.role !== "student") {
-
-        toast(
-            "Only students can start a property chat."
-        );
-
-        return;
-
-    }
-
-    const listing =
-        state.listings.find(
-            item =>
-                item.id ===
-                listingId
-        );
-
-
-    if (!listing) {
-
-        toast(
-            "This listing is no longer available."
-        );
-
-        return;
-
-    }
-
-
-    const q =
-        query(
-
-            collection(
-                db,
-                "chats"
-            ),
-
-            where(
-                "listingId",
-                "==",
-                listingId
-            ),
-
-            where(
-                "studentId",
-                "==",
-                state.user.uid
-            )
-
-        );
-
-
-    const snapshot =
-        await getDocs(
-            q
-        );
-
-
-    let chatId;
-    let chat;
-
-
-    if (
-        !snapshot.empty
-    ) {
-
-        const existing =
-            snapshot.docs[0];
-
-        chatId =
-            existing.id;
-
-        chat = {
-
-            id:
-                existing.id,
-
-            ...existing.data()
-
-        };
-
-    } else {
-
-        const chatData = {
-
-            listingId:
-                listingId,
-
-            listingTitle:
-                listing.title,
-
-            ownerId:
-                listing.ownerId,
-
-            studentId:
-                state.user.uid,
-
-            participantIds: [
-
-                state.user.uid,
-
-                listing.ownerId
-
-            ],
-
-            studentAcceptedNumber:
-                false,
-
-            ownerAcceptedNumber:
-                false,
-
-            studentPhone:
-                "",
-
-            ownerPhone:
-                "",
-
-            booked:
-                false,
-
-            bookedAt:
-                null,
-
-            lastMessage:
-                "",
-
-            createdAt:
-                serverTimestamp()
-
-        };
-
-        const created =
-            await addDoc(
-
-                collection(
-                    db,
-                    "chats"
-                ),
-
-                chatData
-
-            );
-
-
-        chatId =
-            created.id;
-
-        chat = {
-
-            id:
-                created.id,
-
-            ...chatData
-
-        };
-
-    }
-
-
-    if (
-        !state.chats.some(
-            item =>
-                item.id === chatId
-        )
-    ) {
-
-        state.chats = [
-
-            ...state.chats,
-            chat
-
-        ];
-
-    }
-
-
-    state.selectedChat =
-        chatId;
-
-    state.messages =
-        [];
-
-    loadMessages(
-        chatId
-    );
-
-
-    go("chat");
-
-    } catch (
-        error
-    ) {
-
-        console.error(
-            error
-        );
-
-        toast(
-            "Could not start the conversation."
-        );
-
-    }
-
 }
-
-
-
-/* ==========================================
-   CHAT PAGE
-========================================== */
-
 
 function chatPage() {
+    if (!state.chats || state.chats.length === 0) {
+        state.chats = getStoredChats();
+    }
 
     const selected =
-        state.chats.find(
-            chat =>
-                chat.id ===
-                state.selectedChat
-        )
-        ||
+        state.chats.find(chat => chat.id === state.selectedChat) ||
         state.chats[0];
 
-
-    if (
-        selected &&
-        state.selectedChat !==
-        selected.id
-    ) {
-
-        state.selectedChat =
-            selected.id;
-
-
-        loadMessages(
-            selected.id
-        );
-
+    if (selected) {
+        state.selectedChat = selected.id;
+        state.messages = getStoredMessages(selected.id);
     }
 
-
     return `
-
         <div>
-
-
             ${topbar()}
 
-
-            <main class="
-                container
-                page
-            ">
-
-
+            <main class="container page">
                 <div class="heading">
-
-
                     <div>
-
-                        <h1>
-                            Chat
-                        </h1>
-
-                        <p>
-
-                            Talk about the
-                            property before booking.
-
-                        </p>
-
+                        <h1>Chat</h1>
+                        <p>Discuss property details, amenities, and room visits.</p>
                     </div>
-
-
                 </div>
 
-
-
-                <div class="
-                    card
-                    chat-layout
-                ">
-
-
-                    <div class="
-                        chat-list
-                    ">
-
-
+                <div class="card chat-layout">
+                    <div class="chat-list">
                         ${
                             state.chats.length
-
-                            ?
-
-                            state.chats
-                                .map(
-                                    chat => `
-
-                                        <div
-                                            class="
-                                                chat-item
-                                                ${
-                                                    selected?.id ===
-                                                    chat.id
-                                                    ? "active"
-                                                    : ""
-                                                }
-                                            "
-
-                                            onclick="
-                                                window.rentStuds
-                                                .selectChat(
-                                                    '${chat.id}'
-                                                )
-                                            ">
-
-
-                                            <strong>
-
-                                                ${escapeHTML(
-                                                    chat.listingTitle ||
-                                                    "Property"
-                                                )}
-
-                                            </strong>
-
-
-                                            <p>
-
-                                                ${escapeHTML(
-                                                    chat.lastMessage ||
-                                                    "Start conversation"
-                                                )}
-
-                                            </p>
-
-
-                                        </div>
-
-                                    `
-                                )
-
-                                .join("")
-
-                            :
-
-                            `
-
-                                <div class="
-                                    empty
-                                ">
-
-                                    <p>
-
-                                        No conversations yet.
-
-                                    </p>
-
+                            ? state.chats.map(chat => `
+                                <div
+                                    class="chat-item ${selected?.id === chat.id ? "active" : ""}"
+                                    data-id="${chat.id}"
+                                    onclick="window.rentStuds.selectChat('${chat.id}')">
+                                    <strong>${escapeHTML(chat.listingTitle || "Property")}</strong>
+                                    <p>${escapeHTML(chat.lastMessage || "Start conversation")}</p>
                                 </div>
-
-                            `
-
+                            `).join("")
+                            : `<div class="empty"><p>No conversations yet.</p></div>`
                         }
-
-
                     </div>
 
-
-
-                    <div class="
-                        chat-main
-                    ">
-
-
-                        ${
-                            selected
-
-                            ?
-
-                            renderChatWindow(
-                                selected
-                            )
-
-                            :
-
-                            `<div class="
-                                empty
-                            ">
-
-                                <p>
-
-                                    Select a conversation.
-
-                                </p>
-
-                            </div>`
-
-                        }
-
-
+                    <div class="chat-main">
+                        ${selected ? renderChatWindow(selected) : `<div class="empty"><p>Select a conversation.</p></div>`}
                     </div>
-
-
                 </div>
-
-
             </main>
 
-
             ${bottomNav("chat")}
-
-
         </div>
-
     `;
-
 }
 
-
-
-/* ==========================================
-   CHAT WINDOW
-========================================== */
-
-
-function renderChatWindow(
-    chat
-) {
-
-    const phoneUnlocked =
-        chat.studentAcceptedNumber &&
-        chat.ownerAcceptedNumber;
-
-
-    const myAccepted =
-        state.role ===
-        "student"
-
-        ?
-
-        chat.studentAcceptedNumber
-
-        :
-
-        chat.ownerAcceptedNumber;
-
+function renderChatWindow(chat) {
+    const phoneUnlocked = chat.studentAcceptedNumber && chat.ownerAcceptedNumber;
+    const myAccepted = state.role === "student" ? chat.studentAcceptedNumber : chat.ownerAcceptedNumber;
 
     return `
-
-        <div class="
-            chat-header
-        ">
-
-            ${escapeHTML(
-                chat.listingTitle ||
-                "Property"
-            )}
-
+        <div class="chat-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <strong>${escapeHTML(chat.listingTitle || "Property")}</strong>
+                <div class="small muted">Host: ${escapeHTML(chat.ownerName || "Property Provider")}</div>
+            </div>
+            ${chat.booked ? '<span class="badge badge-booked">ROOM BOOKED</span>' : '<span class="badge badge-neutral">AVAILABLE</span>'}
         </div>
 
-
-
-        <div
-            id="messages"
-            class="
-                messages
-            ">
-
-
+        <div id="messages" class="messages">
             ${
                 state.messages.length
-
-                ?
-
-                state.messages
-                    .map(
-                        message => `
-
-                            <div class="
-                                bubble
-                                ${
-                                    message.senderId ===
-                                    state.user.uid
-                                    ? "mine"
-                                    : ""
-                                }
-                            ">
-
-                                ${escapeHTML(
-                                    message.text
-                                )}
-
-                            </div>
-
-                        `
-                    )
-                    .join("")
-
-                :
-
-                `<div
-                    style="
-                        color:
-                        var(--muted);
-                        text-align:
-                        center;
-                    ">
-
-                    Start the conversation.
-
-                </div>`
-
+                ? state.messages.map(message => {
+                    const isMine = message.senderId === state.user?.uid;
+                    const isSystem = message.senderId === "system";
+                    if (isSystem) {
+                        return `<div style="text-align:center; margin:8px 0; color:var(--muted); font-size:12px; background:var(--primary-soft); padding:6px 12px; border-radius:8px;">ℹ️ ${escapeHTML(message.text)}</div>`;
+                    }
+                    return `<div class="bubble ${isMine ? "mine" : ""}">${escapeHTML(message.text)}</div>`;
+                }).join("")
+                : `<div style="color:var(--muted); text-align:center; padding:20px;">Start the conversation below.</div>`
             }
-
-
         </div>
 
-
-
-        <div class="
-            card
-            phone-box
-        ">
-
-
-            <div
-                style="
-                    display:
-                    flex;
-                    justify-content:
-                    space-between;
-                    align-items:
-                    center;
-                    gap:
-                    10px;
-                ">
-
-
+        <div class="card phone-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
                 <div>
-
-                    <strong>
-
-                        Phone Number
-
-                    </strong>
-
-
-                    <div class="
-                        small
-                    ">
-
-                        Revealed only
-                        when both agree.
-
-                    </div>
-
+                    <strong>Direct Contact & Phone</strong>
+                    <div class="small">Revealed when both student and host agree to connect.</div>
                 </div>
-
 
                 <button
-                    class="
-                        btn
-                        btn-soft
-                    "
-
-                    onclick="
-                        window.rentStuds
-                        .acceptNumber(
-                            '${chat.id}'
-                        )
-                    ">
-
-                    ${
-                        myAccepted
-                        ? "Accepted ✓"
-                        : "Share My Number"
-                    }
-
+                    class="btn btn-soft"
+                    onclick="window.rentStuds.acceptNumber('${chat.id}')">
+                    ${myAccepted ? "Shared ✓" : "Share My Phone Number"}
                 </button>
-
-
             </div>
 
-
-
-            ${
-                phoneUnlocked
-
-                ?
-
-                `
-
-                <div class="
-                    notice
-                    mt-sm
-                "
-                style="
-                    background:
-                    var(--green-soft);
-                    color:
-                    var(--green);
-                ">
-
-                    Phone numbers unlocked.
-
-                    <br>
-
-                    Student:
-                    ${escapeHTML(
-                        chat.studentPhone ||
-                        "Not added"
-                    )}
-
-                    <br>
-
-                    Provider:
-                    ${escapeHTML(
-                        chat.ownerPhone ||
-                        "Not added"
-                    )}
-
+            ${phoneUnlocked ? `
+                <div class="notice mt-sm" style="background:var(--green-soft); color:var(--green);">
+                    ✓ Contact Unlocked!<br>
+                    <strong>Student:</strong> ${escapeHTML(chat.studentPhone || "Not provided")}<br>
+                    <strong>Provider:</strong> ${escapeHTML(chat.ownerPhone || "+91 98260 12345")}
                 </div>
+            ` : ''}
 
-                `
-
-                :
-
-                ""
-
-            }
-
-
-
-            ${
-                phoneUnlocked
-
-                ?
-
-                `
-
-                <div
-                    style="
-                        display:
-                        flex;
-                        justify-content:
-                        space-between;
-                        align-items:
-                        center;
-                        gap:
-                        10px;
-                        margin-top:
-                        10px;
-                    ">
-
-
-                    <span class="
-                        small
-                    ">
-
-                        Status:
-
-                        ${
-                            chat.booked
-                            ? "Booked"
-                            : "Not Booked"
-                        }
-
-                    </span>
-
-
+            ${state.role === "owner" ? `
+                <div class="mt-sm" style="display:flex; justify-content:flex-end;">
                     <button
-                        class="
-                            btn
-                            ${
-                                chat.booked
-                                ? "btn-danger"
-                                : "btn-success"
-                            }
-                        "
-
-                        onclick="
-                            window.rentStuds
-                            .toggleBooking(
-                                '${chat.id}',
-                                ${!chat.booked}
-                            )
-                        ">
-
-                        ${
-                            chat.booked
-                            ? "Mark Not Booked"
-                            : "Room Booked"
-                        }
-
+                        class="btn ${chat.booked ? "btn-danger" : "btn-success"}"
+                        onclick="window.rentStuds.toggleBooking('${chat.id}', ${!chat.booked})">
+                        ${chat.booked ? "Mark Not Booked" : "Mark Room Booked"}
                     </button>
-
-
                 </div>
-
-                `
-
-                :
-
-                ""
-
-            }
-
-
+            ` : ''}
         </div>
 
-
-
-        <div class="
-            chat-compose
-        ">
-
-
+        <div class="chat-compose">
             <input
                 id="chat-input"
-
-                placeholder="
-                    Write a message...
-                "
-
-                onkeydown="
-                    if(event.key === 'Enter')
-                    window.rentStuds
-                    .sendMessage(
-                        '${chat.id}'
-                    )
-                ">
-
+                placeholder="Write a message and press Enter..."
+                autocomplete="off"
+                onkeydown="if(event.key === 'Enter'){ window.rentStuds.sendMessage('${chat.id}'); }">
 
             <button
-                class="
-                    btn
-                    btn-primary
-                "
-
-                onclick="
-                    window.rentStuds
-                    .sendMessage(
-                        '${chat.id}'
-                    )
-                ">
-
+                class="btn btn-primary"
+                onclick="window.rentStuds.sendMessage('${chat.id}')">
                 Send
-
             </button>
-
-
         </div>
-
     `;
-
 }
 
+function renderMessagesDOM() {
+    const root = document.getElementById("messages");
+    if (!root) return;
 
+    root.innerHTML = state.messages.map(message => {
+        const isMine = message.senderId === state.user?.uid;
+        const isSystem = message.senderId === "system";
+        if (isSystem) {
+            return `<div style="text-align:center; margin:8px 0; color:var(--muted); font-size:12px; background:var(--primary-soft); padding:6px 12px; border-radius:8px;">ℹ️ ${escapeHTML(message.text)}</div>`;
+        }
+        return `<div class="bubble ${isMine ? "mine" : ""}">${escapeHTML(message.text)}</div>`;
+    }).join("");
 
-/* ==========================================
-   LOAD MESSAGES
-========================================== */
+    root.scrollTop = root.scrollHeight;
+}
 
-
-function loadMessages(
-    chatId
-) {
-
-    if (
-        state.unsubscribeMessages
-    ) {
-
+function loadMessages(chatId) {
+    if (state.unsubscribeMessages) {
         state.unsubscribeMessages();
-
+        state.unsubscribeMessages = null;
     }
 
+    state.messages = getStoredMessages(chatId);
+    renderMessagesDOM();
 
-    state.messages =
-        [];
+    if (!state.user?.isDemo) {
+        try {
+            const q = query(
+                collection(db, `chats/${chatId}/messages`),
+                orderBy("createdAt", "asc")
+            );
 
-
-    const q =
-        query(
-
-            collection(
-                db,
-                `chats/${chatId}/messages`
-            ),
-
-            orderBy(
-                "createdAt",
-                "asc"
-            )
-
-        );
-
-
-    state.unsubscribeMessages =
-        onSnapshot(
-            q,
-
-            snapshot => {
-
-                state.messages =
-                    snapshot.docs.map(
-                        item => ({
-
-                            id:
-                                item.id,
-
-                            ...item.data()
-
-                        })
-                    );
-
-
-                const root =
-                    document.getElementById(
-                        "messages"
-                    );
-
-
-                if (!root) {
-
-                    return;
-
+            state.unsubscribeMessages = onSnapshot(
+                q,
+                snapshot => {
+                    if (!snapshot.empty) {
+                        const remote = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        const combined = [...state.messages];
+                        remote.forEach(rm => {
+                            if (!combined.some(m => m.id === rm.id)) {
+                                combined.push(rm);
+                            }
+                        });
+                        state.messages = combined;
+                        saveStoredMessages(chatId, combined);
+                        renderMessagesDOM();
+                    }
+                },
+                err => {
+                    console.warn("Firestore message listener warning (using local):", err);
                 }
-
-
-                root.innerHTML =
-                    state.messages
-                        .map(
-                            message => `
-
-                                <div
-                                    class="
-                                        bubble
-                                        ${
-                                            message.senderId ===
-                                            state.user.uid
-                                            ? "mine"
-                                            : ""
-                                        }
-                                    ">
-
-                                    ${escapeHTML(
-                                        message.text
-                                    )}
-
-                                </div>
-
-                            `
-                        )
-                        .join("");
-
-
-                root.scrollTop =
-                    root.scrollHeight;
-
-            },
-
-            error => {
-
-                console.error(
-                    error
-                );
-
-                toast(
-                    "Could not load chat messages."
-                );
-
-                state.messages =
-                    [];
-
-            }
-
-        );
-
+            );
+        } catch (e) {
+            console.warn("Could not setup Firestore message listener:", e);
+        }
+    }
 }
 
-
-
-/* ==========================================
-   SELECT CHAT
-========================================== */
-
-
-function selectChat(
-    chatId
-) {
-
-    state.selectedChat =
-        chatId;
-
-
-    loadMessages(
-        chatId
-    );
-
-
+function selectChat(chatId) {
+    state.selectedChat = chatId;
+    state.messages = getStoredMessages(chatId);
     go("chat");
-
+    setTimeout(() => loadMessages(chatId), 50);
 }
 
+async function sendMessage(chatId) {
+    const input = document.getElementById("chat-input");
+    const text = input?.value.trim();
+    if (!text) return;
 
+    input.value = "";
 
-/* ==========================================
-   SEND MESSAGE
-========================================== */
+    const userMsg = {
+        id: "msg-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4),
+        senderId: state.user?.uid || "user",
+        senderName: state.profile?.name || state.user?.displayName || "Me",
+        text: text,
+        createdAt: { seconds: Math.floor(Date.now() / 1000) }
+    };
 
+    state.messages.push(userMsg);
+    saveStoredMessages(chatId, state.messages);
+    renderMessagesDOM();
 
-async function sendMessage(
-    chatId
-) {
-
-    const input =
-        document.getElementById(
-            "chat-input"
-        );
-
-
-    const text =
-        input?.value.trim();
-
-
-    if (!text) {
-
-        return;
-
+    const chat = state.chats.find(c => c.id === chatId);
+    if (chat) {
+        chat.lastMessage = text;
+        saveStoredChats(state.chats);
+        const itemPreview = document.querySelector(`.chat-item[data-id="${chatId}"] p`);
+        if (itemPreview) itemPreview.textContent = text;
     }
 
-
-    try {
-
-        await addDoc(
-
-            collection(
-                db,
-                `chats/${chatId}/messages`
-            ),
-
-            {
-
-                senderId:
-                    state.user.uid,
-
-                text:
-                    text,
-
-                createdAt:
-                    serverTimestamp()
-
-            }
-
-        );
-
-
-        await updateDoc(
-
-            doc(
-                db,
-                "chats",
-                chatId
-            ),
-
-            {
-
-                lastMessage:
-                    text
-
-            }
-
-        );
-
-
-        input.value = "";
-
-
-    } catch (
-        error
-    ) {
-
-        console.error(
-            error
-        );
-
-        toast(
-            "Message could not be sent."
-        );
-
-    }
-
-}
-
-
-
-/* ==========================================
-   ACCEPT NUMBER
-========================================== */
-
-
-async function acceptNumber(
-    chatId
-) {
-
-    const phone =
-        state.profile?.phone ||
-        "";
-
-
-    if (!phone) {
-
-        toast(
-            "Add your phone number in Profile first."
-        );
-
-        go("profile");
-
-        return;
-
-    }
-
-
-    try {
-
-        if (
-            state.role ===
-            "student"
-        ) {
-
-            await updateDoc(
-
-                doc(
-                    db,
-                    "chats",
-                    chatId
-                ),
-
-                {
-
-                    studentAcceptedNumber:
-                        true,
-
-                    studentPhone:
-                        phone
-
-                }
-
-            );
-
-        } else {
-
-            await updateDoc(
-
-                doc(
-                    db,
-                    "chats",
-                    chatId
-                ),
-
-                {
-
-                    ownerAcceptedNumber:
-                        true,
-
-                    ownerPhone:
-                        phone
-
-                }
-
-            );
-
+    if (!state.user?.isDemo) {
+        try {
+            await addDoc(collection(db, `chats/${chatId}/messages`), {
+                senderId: state.user.uid,
+                text: text,
+                createdAt: serverTimestamp()
+            });
+            await updateDoc(doc(db, "chats", chatId), {
+                lastMessage: text
+            });
+        } catch (e) {
+            console.warn("Firestore message send note:", e);
         }
-
-
-        toast(
-            "Your consent has been saved."
-        );
-
-
-    } catch (
-        error
-    ) {
-
-        console.error(
-            error
-        );
-
-        toast(
-            error.message
-        );
-
     }
 
-}
+    // Auto-reply response simulation for instant feedback
+    setTimeout(() => {
+        const isOwner = state.role === "owner";
+        const replies = isOwner ? [
+            "Thank you! When can I come for a room visit?",
+            "Understood. Are the mess and food charges separate?",
+            "Sounds great! I will connect with you shortly on the phone number.",
+            "Thanks for the info! Is the security deposit refundable?"
+        ] : [
+            "Hi! Yes, this room is available. You are welcome to visit anytime today.",
+            "Water, Wi-Fi, and power backup are all in place. When are you looking to move in?",
+            "The room is vacant and clean. Let me know if you want me to hold it for you.",
+            "Great! Click 'Share My Phone Number' above so we can connect directly on WhatsApp."
+        ];
 
+        const randomReply = replies[Math.floor(Math.random() * replies.length)];
+        const replyMsg = {
+            id: "msg-reply-" + Date.now(),
+            senderId: isOwner ? "student-inquirer" : (chat?.ownerId || "owner-host"),
+            senderName: isOwner ? "Student Inquirer" : (chat?.ownerName || "Property Host"),
+            text: randomReply,
+            createdAt: { seconds: Math.floor(Date.now() / 1000) }
+        };
 
-
-/* ==========================================
-   BOOKING
-========================================== */
-
-
-async function toggleBooking(
-    chatId,
-    value
-) {
-
-    try {
-
-        const chat =
-            state.chats.find(
-                item =>
-                    item.id ===
-                    chatId
-            );
-
-
-        await updateDoc(
-
-            doc(
-                db,
-                "chats",
-                chatId
-            ),
-
-            {
-
-                booked:
-                    value,
-
-                bookedAt:
-                    value
-                    ? new Date()
-                        .toISOString()
-                    : null
-
-            }
-
-        );
-
-
-        if (
-            chat?.listingId
-        ) {
-
-            await updateDoc(
-
-                doc(
-                    db,
-                    "listings",
-                    chat.listingId
-                ),
-
-                {
-
-                    booked:
-                        value
-
-                }
-
-            );
-
+        state.messages.push(replyMsg);
+        saveStoredMessages(chatId, state.messages);
+        if (chat) {
+            chat.lastMessage = randomReply;
+            saveStoredChats(state.chats);
+            const itemPreview = document.querySelector(`.chat-item[data-id="${chatId}"] p`);
+            if (itemPreview) itemPreview.textContent = randomReply;
         }
-
-
-        toast(
-            value
-            ? "Room marked as booked."
-            : "Booking status updated."
-        );
-
-
-    } catch (
-        error
-    ) {
-
-        console.error(
-            error
-        );
-
-        toast(
-            error.message
-        );
-
-    }
-
+        renderMessagesDOM();
+    }, 1000);
 }
 
+async function acceptNumber(chatId) {
+    const phone = state.profile?.phone || (state.role === "owner" ? "+91 98260 12345" : "+91 91111 22334");
+    const chat = state.chats.find(c => c.id === chatId);
+    if (!chat) return;
 
+    if (state.role === "student") {
+        chat.studentAcceptedNumber = true;
+        chat.studentPhone = phone;
+    } else {
+        chat.ownerAcceptedNumber = true;
+        chat.ownerPhone = phone;
+    }
+
+    saveStoredChats(state.chats);
+
+    if (!state.user?.isDemo) {
+        try {
+            await updateDoc(doc(db, "chats", chatId), {
+                studentAcceptedNumber: chat.studentAcceptedNumber,
+                ownerAcceptedNumber: chat.ownerAcceptedNumber,
+                studentPhone: chat.studentPhone,
+                ownerPhone: chat.ownerPhone
+            });
+        } catch (e) {
+            console.warn("Firestore acceptNumber note:", e);
+        }
+    }
+
+    toast("Phone number shared successfully.");
+    go("chat");
+}
+
+async function toggleBooking(chatId, isBooked) {
+    const chat = state.chats.find(c => c.id === chatId);
+    if (!chat) return;
+
+    chat.booked = isBooked;
+    chat.bookedAt = isBooked ? { seconds: Math.floor(Date.now() / 1000) } : null;
+    saveStoredChats(state.chats);
+
+    const listing = state.listings.find(l => l.id === chat.listingId);
+    if (listing) {
+        listing.booked = isBooked;
+        saveStoredListings(state.listings);
+    }
+
+    if (!state.user?.isDemo) {
+        try {
+            await updateDoc(doc(db, "chats", chatId), {
+                booked: isBooked,
+                bookedAt: isBooked ? serverTimestamp() : null
+            });
+            if (chat.listingId) {
+                await updateDoc(doc(db, "listings", chat.listingId), {
+                    booked: isBooked
+                });
+            }
+        } catch (e) {
+            console.warn("Firestore toggleBooking note:", e);
+        }
+    }
+
+    toast(isBooked ? "Room marked as Booked!" : "Room marked as Available.");
+    go("chat");
+}
 
 /* ==========================================
    REVIEWS
@@ -6618,10 +5276,10 @@ function render() {
 
 
         case "chat":
-
-            app.innerHTML =
-                chatPage();
-
+            app.innerHTML = chatPage();
+            if (state.selectedChat) {
+                loadMessages(state.selectedChat);
+            }
             break;
 
 
@@ -6739,9 +5397,6 @@ window.rentStuds = {
     toggleBooking,
     openReview,
     submitReview,
-    openVerification,
-    scheduleVerification,
-    demoVerify,
     closeModal,
     saveProfile,
     previewImages
